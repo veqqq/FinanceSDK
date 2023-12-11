@@ -2,6 +2,7 @@ package APIs
 
 import (
 	"FinanceSDK/e"
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -12,7 +13,7 @@ import (
 // Custom loat64 to handle nulls etc. when unmarshaling
 
 type OwnFloat64 struct {
-	Value float64
+	Val   float64
 	Valid bool
 }
 
@@ -24,7 +25,7 @@ func (of *OwnFloat64) UnmarshalJSON(data []byte) error {
 
 	switch v := rawValue.(type) {
 	case float64:
-		of.Value = v
+		of.Val = v
 		of.Valid = true
 	case string:
 		if v == "None" {
@@ -34,7 +35,7 @@ func (of *OwnFloat64) UnmarshalJSON(data []byte) error {
 			if err != nil {
 				return err
 			}
-			of.Value = value
+			of.Val = value
 			of.Valid = true
 		}
 	default:
@@ -48,7 +49,29 @@ func (of OwnFloat64) MarshalJSON() ([]byte, error) {
 	if !of.Valid {
 		return json.Marshal(0)
 	}
-	return json.Marshal(fmt.Sprint(int64(of.Value)))
+	return json.Marshal(fmt.Sprint(int64(of.Val)))
+}
+
+func (of OwnFloat64) Value() (driver.Value, error) {
+	return float64(of.Val), nil
+}
+
+func (of *OwnFloat64) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case float64:
+		of.Val = v
+		of.Valid = true
+	case []byte:
+		f, err := strconv.ParseFloat(string(v), 64)
+		if err != nil {
+			return err
+		}
+		of.Val = f
+		of.Valid = true
+	default:
+		return fmt.Errorf("unsupported type: %T", value)
+	}
+	return nil
 }
 
 // will need to turn dates into sql dates

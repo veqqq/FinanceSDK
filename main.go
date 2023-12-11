@@ -519,7 +519,7 @@ mainchoice:
 
 			err = db.Ping()
 			e.Check(err)
-			JsonToPostgres(db, resp.Body)
+			JsonToPostgres(db, ticker.TickerSymbol, resp.Body)
 		}
 	case 3:
 		// v0.1 functionality
@@ -548,11 +548,12 @@ func main() {
 	db, err := sql.Open("postgres", psqlInfo) // first arg is driver name (pq!)
 	e.Check(err)
 
-	structType = "APIs.DailyOHLCVs"
-	url := "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=IBM&interval=5min&month=2009-01&outputsize=full&apikey=date"
+	structType = "APIs.StockOverview"
+	url := "https://www.alphavantage.co/query?function=OVERVIEW&symbol=IBM&apikey=demo"
+	fmt.Print(url)
 	resp, _ := http.Get(url)
 
-	JsonToPostgres(db, resp.Body)
+	JsonToPostgres(db, "IBM", resp.Body)
 
 	// for {
 	// 	WhatDoesUserWantToDo()
@@ -627,7 +628,7 @@ func AddTickersToDB(db *sql.DB, jobs []Job) {
 	}
 }
 
-func JsonToPostgres(db *sql.DB, resp io.Reader) { // globalvar structtype will hold the type
+func JsonToPostgres(db *sql.DB, ticker string, resp io.Reader) { // globalvar structtype will hold the type
 	decoder := json.NewDecoder(resp)
 
 	// _, err = db.Exec(`INSERT INTO tickers (TickerSymbol, Importance)
@@ -651,20 +652,21 @@ func JsonToPostgres(db *sql.DB, resp io.Reader) { // globalvar structtype will h
 		err := decoder.Decode(&m)
 		e.Check(err)
 
-		_, err = db.Exec(`INSERT INTO stock_overviews (
-        symbol, asset_type, name, description, cik, exchange, currency, country, sector, industry,
+		tickerID := GetTickerID(db, ticker)
+
+		_, err = db.Exec(`INSERT INTO stock_overviews (id,
+        symbol, asset_type, name, cik, exchange, currency, country, sector, industry,
         address, fiscal_year_end, latest_quarter, market_capitalization, ebitda, pe_ratio, peg_ratio,
         book_value, dividend_per_share, dividend_yield, eps, revenue_per_share_ttm, profit_margin,
         operating_margin_ttm, return_on_assets_ttm, return_on_equity_ttm, revenue_ttm, gross_profit_ttm,
         diluted_eps_ttm, quarterly_earnings_growth_yoy, quarterly_revenue_growth_yoy,
         analyst_target_price, trailing_pe, forward_pe, price_to_sales_ratio_ttm, price_to_book_ratio,
         ev_to_revenue, ev_to_ebitda, beta, day_moving_average_50,
-        day_moving_average_200, shares_outstanding, dividend_date, ex_dividend_date
-  	  ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+        day_moving_average_200, shares_outstanding, dividend_date, ex_dividend_date)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
         $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38,
-        $39, $40, $41, $42, $43, $44,
-    	)`, m.Symbol, m.AssetType, m.Name, m.Description,
+        $39, $40, $41, $42, $43, $44)`,
+			tickerID, m.Symbol, m.AssetType, m.Name,
 			m.CIK, m.Exchange, m.Currency, m.Country,
 			m.Sector, m.Industry, m.Address, m.FiscalYearEnd,
 			m.LatestQuarter, m.MarketCapitalization, m.EBITDA,
@@ -727,9 +729,7 @@ func JsonToPostgres(db *sql.DB, resp io.Reader) { // globalvar structtype will h
 		i := 0
 		fmt.Printf("Number of elements in m.TimeSeries1min: %d\n", len(m.TimeSeries1min))
 
-		var tickerID int
-		err = db.QueryRow("SELECT TickerID FROM tickers WHERE TickerSymbol = $1", "IBM").Scan(&tickerID)
-		e.Check(err)
+		tickerID := GetTickerID(db, ticker)
 
 		for _, b := range m.TimeSeries1min {
 			fmt.Printf("Adding values: %v %v %v %v %v %v\n", tickerID, b.Open, b.High, b.Low, b.Close, b.Volume)
@@ -794,4 +794,11 @@ func JsonToPostgres(db *sql.DB, resp io.Reader) { // globalvar structtype will h
 		panic("confident I don't need this")
 
 	}
+}
+
+func GetTickerID(db *sql.DB, ticker string) int {
+	var tickerID int
+	err := db.QueryRow("SELECT TickerID FROM tickers WHERE TickerSymbol = $1", ticker).Scan(&tickerID)
+	e.Check(err)
+	return tickerID
 }

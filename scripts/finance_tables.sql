@@ -72,7 +72,6 @@ CREATE TABLE stock_overviews (
     symbol varchar REFERENCES tickers(TickerSymbol),
     asset_type varchar,
     name varchar,
-    description varchar,
     cik varchar,
     exchange varchar,
     currency varchar,
