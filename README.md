@@ -20,7 +20,7 @@
 
 - postgres access funcs
 
-- go CLI to add to job queue (and get basic info from db?)
+- go CLI get basic info from db?
 - go program to update based on job queue
     - check lastupdateds to populate jobqueue
     - then update

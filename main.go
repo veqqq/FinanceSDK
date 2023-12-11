@@ -339,9 +339,7 @@ func ReformatJson(resp io.Reader) string {
 		var seriesDataMap APIs.ForexPrices
 		err := decoder.Decode(&seriesDataMap)
 		e.Check(err)
-		output, err := json.Marshal(seriesDataMap.TimeSeriesFX)
-		e.Check(err)
-		return string(output)
+		return seriesDataMap.TimeSeriesFX
 	case "APIs.TGLATs":
 		var seriesDataMap APIs.TGLATs
 		err := decoder.Decode(&seriesDataMap)
@@ -447,6 +445,8 @@ func WriteToFile(filename, data string) {
 	}
 
 	filename = strings.ReplaceAll(filename, " ", "_") // remove spaces from file name
+	err := os.MkdirAll("data", 0755)                  // make folder if it doesn't exist
+	e.Check(err)
 	f, err := os.OpenFile("data/"+filename+".json", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0755)
 	e.Check(err)
 	defer f.Close()
@@ -469,7 +469,7 @@ func WhatDoesUserWantToDo() {
 	db, err := sql.Open("postgres", psqlInfo) // first arg is driver name (pq!)
 	e.Check(err)
 
-	fmt.Print("What do you want to do?\n1. Add a ticker\n2. Let DB Update\n3. Save ticker as local json (v0.1)\n4. Exit\n")
+	fmt.Print("What do you want to do?\n1. Add a ticker\n2. Let DB Update\n3. Save ticker as local json (v0.1) - Requires /data folder\n4. Exit\n")
 	fmt.Scan(&choice)
 
 mainchoice:
@@ -495,7 +495,7 @@ mainchoice:
 			willUserContinue := GetSanatizedInput("Do you want to add more tickers? y or n\n", "y", "n")
 			if willUserContinue == "n" {
 				fmt.Println(newtickers)
-				// AddTickersToDB(db, newtickers)
+				AddTickersToDB(db, newtickers)
 				break mainchoice
 			}
 		}
@@ -508,12 +508,15 @@ mainchoice:
 		tickers, err := GetJobQueue(db) // implement
 		e.Check(err)
 		fmt.Print(tickers)
-		// url := QueryBuilder(ticker)
-		// resp, err := http.Get(url)
-		// 	e.Check(err)
-		//	defer resp.Body.Close()
-		// finalData := UnmarshalJson(resp.Body)
+		for _, ticker := range tickers {
+			url := QueryBuilder(ticker.TickerSymbol)
+			resp, err := http.Get(url)
+			e.Check(err)
+			defer resp.Body.Close()
 
+			decoder := json.NewDecoder(resp)
+			data := json.Unmarshal(resp.Body)
+		}
 		// AddToPostgres(db, finalData) // implement
 	case 3:
 		// v0.1 functionality
@@ -535,7 +538,6 @@ mainchoice:
 }
 
 func main() {
-
 	for {
 		WhatDoesUserWantToDo()
 	}
@@ -577,13 +579,26 @@ func GetJobQueue(db *sql.DB) ([]Job, error) {
 	return jobQueue, nil
 }
 
-func AddTickersToDB(db *sql.DB, jobs []Job) {
+func GetSanatizedInput(msg string, args ...string) string {
+	for {
+		fmt.Println(msg)
+		var userInput string
+		fmt.Scan(&userInput)
+		for _, arg := range args {
+			if userInput == arg {
+				return userInput
+			}
+		}
+		fmt.Printf("Invalid input")
+	}
+}
 
+func AddTickersToDB(db *sql.DB, jobs []Job) {
 	err := db.Ping()
 	e.Check(err)
 
 	for _, job := range jobs {
-		_, err = db.Exec(`INSERT INTO tickers (TickerSymbol, LastName)
+		_, err = db.Exec(`INSERT INTO tickers (TickerSymbol, Importance)
 	VALUES ($1, $2)`,
 			job.TickerSymbol, job.Importance)
 		if err != nil {
@@ -596,16 +611,86 @@ func AddTickersToDB(db *sql.DB, jobs []Job) {
 	}
 }
 
-func GetSanatizedInput(msg string, args ...string) string {
-	for {
-		fmt.Println(msg)
-		var userInput string
-		fmt.Scan(&userInput)
-		for _, arg := range args {
-			if userInput == arg {
-				return userInput
-			}
-		}
-		fmt.Printf("Invalid input")
+func JsonToPostgres(resp io.Reader) string {
+	decoder := json.NewDecoder(resp)
+
+	// the switch checks global var structType, then uses it as the marshaling struct type
+	switch structType {
+	case "APIs.ForexPrices":
+		var seriesDataMap APIs.ForexPrices
+		err := decoder.Decode(&seriesDataMap)
+		e.Check(err)
+		output, err := json.Marshal(seriesDataMap.TimeSeriesFX)
+		e.Check(err)
+		return string(output)
+	// case "APIs.TGLATs": // did not add to postgres, suspect unneeded
+	// 	var seriesDataMap APIs.TGLATs // #todo suspect not properly implemented
+	// 	err := decoder.Decode(&seriesDataMap)
+	// 	e.Check(err)
+	// 	output, err := json.Marshal(seriesDataMap) // perhaps change, but 3 maps
+	// 	e.Check(err)
+	// 	return string(output)
+	case "APIs.StockOverview":
+		var seriesDataMap APIs.StockOverview
+		err := decoder.Decode(&seriesDataMap)
+		e.Check(err)
+		output, err := json.Marshal(seriesDataMap)
+		e.Check(err)
+		return string(output)
+	case "APIs.IncomeStatements":
+		var seriesDataMap APIs.IncomeStatements
+		err := decoder.Decode(&seriesDataMap)
+		e.Check(err)
+		output, err := json.Marshal(seriesDataMap.QuarterlyReports)
+		e.Check(err)
+		return string(output)
+	case "APIs.BalanceSheets":
+		var seriesDataMap APIs.BalanceSheets
+		err := decoder.Decode(&seriesDataMap)
+		e.Check(err)
+		output, err := json.Marshal(seriesDataMap.QuarterlyReports)
+		e.Check(err)
+		return string(output)
+	case "APIs.CashFlowStatements":
+		var seriesDataMap APIs.CashFlowStatements
+		err := decoder.Decode(&seriesDataMap)
+		e.Check(err)
+		output, err := json.Marshal(seriesDataMap.QuarterlyReports)
+		e.Check(err)
+		return string(output)
+	case "APIs.EarningsData":
+		var seriesDataMap APIs.EarningsData
+		err := decoder.Decode(&seriesDataMap)
+		e.Check(err)
+		output, err := json.Marshal(seriesDataMap.QuarterlyEarnings)
+		e.Check(err)
+		return string(output)
+	// Commodities and Economic Indicators - use same structure
+	// WTI, BRENT, nat gas, COPPER, ALUMINUM, WHEAT, CORN, COTTON, SUGAR, COFFEE
+	case "APIs.CommodityPrices":
+		var seriesDataMap APIs.CommodityPrices
+		err := decoder.Decode(&seriesDataMap)
+		e.Check(err)
+		output, err := json.Marshal(seriesDataMap.Data)
+		e.Check(err)
+		return string(output)
+	case "APIs.IntradayOHLCVs":
+		var seriesDataMap APIs.IntradayOHLCVs
+		err := decoder.Decode(&seriesDataMap)
+		e.Check(err)
+		output, err := json.Marshal(seriesDataMap.TimeSeries1min)
+		e.Check(err)
+		return string(output)
+	case "APIs.DailyOHLCVs":
+		var seriesDataMap APIs.DailyOHLCVs
+		err := decoder.Decode(&seriesDataMap)
+		e.Check(err)
+
+		output, err := json.Marshal(seriesDataMap.TimeSeries)
+		e.Check(err)
+		return string(output)
+	default: // why do i need this? wont trigger, hm
+		panic("confident I don't need this")
+
 	}
 }
