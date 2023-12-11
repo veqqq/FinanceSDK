@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -336,74 +337,76 @@ func ReformatJson(resp io.Reader) string {
 	// the switch checks global var structType, then uses it as the marshaling struct type
 	switch structType {
 	case "APIs.ForexPrices":
-		var seriesDataMap APIs.ForexPrices
-		err := decoder.Decode(&seriesDataMap)
+		var m APIs.ForexPrices
+		err := decoder.Decode(&m)
 		e.Check(err)
-		return seriesDataMap.TimeSeriesFX
+		output, err := json.Marshal(m.TimeSeriesFX) // perhaps change, but 3 maps
+		e.Check(err)
+		return string(output)
 	case "APIs.TGLATs":
-		var seriesDataMap APIs.TGLATs
-		err := decoder.Decode(&seriesDataMap)
+		var m APIs.TGLATs
+		err := decoder.Decode(&m)
 		e.Check(err)
-		output, err := json.Marshal(seriesDataMap) // perhaps change, but 3 maps
+		output, err := json.Marshal(m) // perhaps change, but 3 maps
 		e.Check(err)
 		return string(output)
 	case "APIs.StockOverview":
-		var seriesDataMap APIs.StockOverview
-		err := decoder.Decode(&seriesDataMap)
+		var m APIs.StockOverview
+		err := decoder.Decode(&m)
 		e.Check(err)
-		output, err := json.Marshal(seriesDataMap)
+		output, err := json.Marshal(m)
 		e.Check(err)
 		return string(output)
 	case "APIs.IncomeStatements":
-		var seriesDataMap APIs.IncomeStatements
-		err := decoder.Decode(&seriesDataMap)
+		var m APIs.IncomeStatements
+		err := decoder.Decode(&m)
 		e.Check(err)
-		output, err := json.Marshal(seriesDataMap.QuarterlyReports)
+		output, err := json.Marshal(m.QuarterlyReports)
 		e.Check(err)
 		return string(output)
 	case "APIs.BalanceSheets":
-		var seriesDataMap APIs.BalanceSheets
-		err := decoder.Decode(&seriesDataMap)
+		var m APIs.BalanceSheets
+		err := decoder.Decode(&m)
 		e.Check(err)
-		output, err := json.Marshal(seriesDataMap.QuarterlyReports)
+		output, err := json.Marshal(m.QuarterlyReports)
 		e.Check(err)
 		return string(output)
 	case "APIs.CashFlowStatements":
-		var seriesDataMap APIs.CashFlowStatements
-		err := decoder.Decode(&seriesDataMap)
+		var m APIs.CashFlowStatements
+		err := decoder.Decode(&m)
 		e.Check(err)
-		output, err := json.Marshal(seriesDataMap.QuarterlyReports)
+		output, err := json.Marshal(m.QuarterlyReports)
 		e.Check(err)
 		return string(output)
 	case "APIs.EarningsData":
-		var seriesDataMap APIs.EarningsData
-		err := decoder.Decode(&seriesDataMap)
+		var m APIs.EarningsData
+		err := decoder.Decode(&m)
 		e.Check(err)
-		output, err := json.Marshal(seriesDataMap.QuarterlyEarnings)
+		output, err := json.Marshal(m.QuarterlyEarnings)
 		e.Check(err)
 		return string(output)
 	// Commodities and Economic Indicators - use same structure
 	// WTI, BRENT, nat gas, COPPER, ALUMINUM, WHEAT, CORN, COTTON, SUGAR, COFFEE
 	case "APIs.CommodityPrices":
-		var seriesDataMap APIs.CommodityPrices
-		err := decoder.Decode(&seriesDataMap)
+		var m APIs.CommodityPrices
+		err := decoder.Decode(&m)
 		e.Check(err)
-		output, err := json.Marshal(seriesDataMap.Data)
+		output, err := json.Marshal(m.Data)
 		e.Check(err)
 		return string(output)
 	case "APIs.IntradayOHLCVs":
-		var seriesDataMap APIs.IntradayOHLCVs
-		err := decoder.Decode(&seriesDataMap)
+		var m APIs.IntradayOHLCVs
+		err := decoder.Decode(&m)
 		e.Check(err)
-		output, err := json.Marshal(seriesDataMap.TimeSeries1min)
+		output, err := json.Marshal(m.TimeSeries1min)
 		e.Check(err)
 		return string(output)
 	case "APIs.DailyOHLCVs":
-		var seriesDataMap APIs.DailyOHLCVs
-		err := decoder.Decode(&seriesDataMap)
+		var m APIs.DailyOHLCVs
+		err := decoder.Decode(&m)
 		e.Check(err)
 
-		output, err := json.Marshal(seriesDataMap.TimeSeries)
+		output, err := json.Marshal(m.TimeSeries)
 		e.Check(err)
 		return string(output)
 	default: // why do i need this? wont trigger, hm
@@ -419,14 +422,14 @@ func ReformatJson(resp io.Reader) string {
 // 	// might need to make funcs to marshall and unmarshal for other programs later
 
 // 	// structType will be the var instead of DailyOHLCVs, picking it...
-// 	// declare seriesDataMap in switch cases!
+// 	// declare m in switch cases!
 // 	// but there will be scope issues, so predeclare them globally
 // 	// or more elegantly, use interfaces...
-// 	err := json.NewDecoder(body).Decode(&seriesDataMap)
+// 	err := json.NewDecoder(body).Decode(&m)
 // 	e.Check(err)
 
 // 	// isolate just the time data
-// 	jsondata, err := json.Marshal(seriesdatamap.TimeSeries) // TimeSeries must be modular too...
+// 	jsondata, err := json.Marshal(m.TimeSeries) // TimeSeries must be modular too...
 // 	e.Check(err)
 // 	return string(jsondata) // return a pointer? these are big items...
 // }
@@ -514,10 +517,10 @@ mainchoice:
 			e.Check(err)
 			defer resp.Body.Close()
 
-			decoder := json.NewDecoder(resp)
-			data := json.Unmarshal(resp.Body)
+			err = db.Ping()
+			e.Check(err)
+			JsonToPostgres(db, resp.Body)
 		}
-		// AddToPostgres(db, finalData) // implement
 	case 3:
 		// v0.1 functionality
 		ticker := GetTickerFromUser()
@@ -538,9 +541,22 @@ mainchoice:
 }
 
 func main() {
-	for {
-		WhatDoesUserWantToDo()
-	}
+
+	// open DB
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+"password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname)
+	db, err := sql.Open("postgres", psqlInfo) // first arg is driver name (pq!)
+	e.Check(err)
+
+	structType = "APIs.DailyOHLCVs"
+	url := "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=IBM&interval=5min&month=2009-01&outputsize=full&apikey=date"
+	resp, _ := http.Get(url)
+
+	JsonToPostgres(db, resp.Body)
+
+	// for {
+	// 	WhatDoesUserWantToDo()
+	// }
 }
 
 // DB stuff
@@ -611,84 +627,169 @@ func AddTickersToDB(db *sql.DB, jobs []Job) {
 	}
 }
 
-func JsonToPostgres(resp io.Reader) string {
+func JsonToPostgres(db *sql.DB, resp io.Reader) { // globalvar structtype will hold the type
 	decoder := json.NewDecoder(resp)
 
-	// the switch checks global var structType, then uses it as the marshaling struct type
+	// _, err = db.Exec(`INSERT INTO tickers (TickerSymbol, Importance)
+	// VALUES ($1, $2)`,
+	// 		job.TickerSymbol, job.Importance)
+	// 	if err != nil {
+	// 		if strings.Contains(err.Error(), "duplicate") {
+	// 			fmt.Println("Duplicate value not saved")
+	// 		} else { panic(err)
+
+	// the switch checks global var structType
 	switch structType {
-	case "APIs.ForexPrices":
-		var seriesDataMap APIs.ForexPrices
-		err := decoder.Decode(&seriesDataMap)
-		e.Check(err)
-		output, err := json.Marshal(seriesDataMap.TimeSeriesFX)
-		e.Check(err)
-		return string(output)
-	// case "APIs.TGLATs": // did not add to postgres, suspect unneeded
-	// 	var seriesDataMap APIs.TGLATs // #todo suspect not properly implemented
-	// 	err := decoder.Decode(&seriesDataMap)
-	// 	e.Check(err)
-	// 	output, err := json.Marshal(seriesDataMap) // perhaps change, but 3 maps
-	// 	e.Check(err)
-	// 	return string(output)
+	// case "APIs.ForexPrices":
+	// 	var m APIs.ForexPrices
+	// 	err := decoder.Decode(&m)
+	// 	e.Check(err) #todo how to know which currency pair? Add it to from and to
+	// _, err = db.Exec(`INSERT INTO forex (fromCurrency, toCurrency, open, high, low, close, datasource)
+	// VALUES ($1, $2, $3, $4, $5, $6, $7)`, from?, to?, APIs.ForexPrice.Open, APIs.ForexPrice.High, APIs.ForexPrice.Low, APIs.ForexPrice.Close, "Alphavantage")
 	case "APIs.StockOverview":
-		var seriesDataMap APIs.StockOverview
-		err := decoder.Decode(&seriesDataMap)
+		var m APIs.StockOverview
+		err := decoder.Decode(&m)
 		e.Check(err)
-		output, err := json.Marshal(seriesDataMap)
-		e.Check(err)
-		return string(output)
+
+		_, err = db.Exec(`INSERT INTO stock_overviews (
+        symbol, asset_type, name, description, cik, exchange, currency, country, sector, industry,
+        address, fiscal_year_end, latest_quarter, market_capitalization, ebitda, pe_ratio, peg_ratio,
+        book_value, dividend_per_share, dividend_yield, eps, revenue_per_share_ttm, profit_margin,
+        operating_margin_ttm, return_on_assets_ttm, return_on_equity_ttm, revenue_ttm, gross_profit_ttm,
+        diluted_eps_ttm, quarterly_earnings_growth_yoy, quarterly_revenue_growth_yoy,
+        analyst_target_price, trailing_pe, forward_pe, price_to_sales_ratio_ttm, price_to_book_ratio,
+        ev_to_revenue, ev_to_ebitda, beta, day_moving_average_50,
+        day_moving_average_200, shares_outstanding, dividend_date, ex_dividend_date
+  	  ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+        $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38,
+        $39, $40, $41, $42, $43, $44,
+    	)`, m.Symbol, m.AssetType, m.Name, m.Description,
+			m.CIK, m.Exchange, m.Currency, m.Country,
+			m.Sector, m.Industry, m.Address, m.FiscalYearEnd,
+			m.LatestQuarter, m.MarketCapitalization, m.EBITDA,
+			m.PERatio, m.PEGRatio, m.BookValue, m.DividendPerShare,
+			m.DividendYield, m.EPS, m.RevenuePerShareTTM,
+			m.ProfitMargin, m.OperatingMarginTTM, m.ReturnOnAssetsTTM,
+			m.ReturnOnEquityTTM, m.RevenueTTM, m.GrossProfitTTM,
+			m.DilutedEPSTTM, m.QuarterlyEarningsGrowthYOY,
+			m.QuarterlyRevenueGrowthYOY, m.AnalystTargetPrice,
+			m.TrailingPE, m.ForwardPE, m.PriceToSalesRatioTTM,
+			m.PriceToBookRatio, m.EVToRevenue, m.EVToEBITDA,
+			m.Beta, m.DayMovingAverage50, m.DayMovingAverage200,
+			m.SharesOutstanding, m.DividendDate, m.ExDividendDate,
+		)
+		if err != nil {
+			// handle the error
+			log.Fatal(err)
+		}
+
 	case "APIs.IncomeStatements":
-		var seriesDataMap APIs.IncomeStatements
-		err := decoder.Decode(&seriesDataMap)
+		var m APIs.IncomeStatements
+		err := decoder.Decode(&m)
 		e.Check(err)
-		output, err := json.Marshal(seriesDataMap.QuarterlyReports)
-		e.Check(err)
-		return string(output)
+		// return m.QuarterlyReports
 	case "APIs.BalanceSheets":
-		var seriesDataMap APIs.BalanceSheets
-		err := decoder.Decode(&seriesDataMap)
+		var m APIs.BalanceSheets
+		err := decoder.Decode(&m)
 		e.Check(err)
-		output, err := json.Marshal(seriesDataMap.QuarterlyReports)
-		e.Check(err)
-		return string(output)
+		// return m.QuarterlyReports
 	case "APIs.CashFlowStatements":
-		var seriesDataMap APIs.CashFlowStatements
-		err := decoder.Decode(&seriesDataMap)
+		var m APIs.CashFlowStatements
+		err := decoder.Decode(&m)
 		e.Check(err)
-		output, err := json.Marshal(seriesDataMap.QuarterlyReports)
-		e.Check(err)
-		return string(output)
+		// return m.QuarterlyReports
 	case "APIs.EarningsData":
-		var seriesDataMap APIs.EarningsData
-		err := decoder.Decode(&seriesDataMap)
+		var m APIs.EarningsData
+		err := decoder.Decode(&m)
 		e.Check(err)
-		output, err := json.Marshal(seriesDataMap.QuarterlyEarnings)
-		e.Check(err)
-		return string(output)
+		// return m.QuarterlyEarnings
 	// Commodities and Economic Indicators - use same structure
 	// WTI, BRENT, nat gas, COPPER, ALUMINUM, WHEAT, CORN, COTTON, SUGAR, COFFEE
 	case "APIs.CommodityPrices":
-		var seriesDataMap APIs.CommodityPrices
-		err := decoder.Decode(&seriesDataMap)
+		var m APIs.CommodityPrices
+		err := decoder.Decode(&m)
 		e.Check(err)
-		output, err := json.Marshal(seriesDataMap.Data)
-		e.Check(err)
-		return string(output)
-	case "APIs.IntradayOHLCVs":
-		var seriesDataMap APIs.IntradayOHLCVs
-		err := decoder.Decode(&seriesDataMap)
-		e.Check(err)
-		output, err := json.Marshal(seriesDataMap.TimeSeries1min)
-		e.Check(err)
-		return string(output)
-	case "APIs.DailyOHLCVs":
-		var seriesDataMap APIs.DailyOHLCVs
-		err := decoder.Decode(&seriesDataMap)
+		// return m.Data
+	case "APIs.IntradayOHLCVs": // #todo totally doesnt work
+		// timeseries1min comes out empty, idk why
+		var m APIs.IntradayOHLCVs
+		fmt.Printf("%v", m)
+		err := decoder.Decode(&m)
 		e.Check(err)
 
-		output, err := json.Marshal(seriesDataMap.TimeSeries)
+		if len(m.TimeSeries1min) == 0 {
+			fmt.Println("m.TimeSeries1min is empty")
+			return
+		}
+		valueStrings := make([]string, 0, len(m.TimeSeries1min))
+		valueArgs := make([]interface{}, 0, len(m.TimeSeries1min)*6)
+		i := 0
+		fmt.Printf("Number of elements in m.TimeSeries1min: %d\n", len(m.TimeSeries1min))
+
+		var tickerID int
+		err = db.QueryRow("SELECT TickerID FROM tickers WHERE TickerSymbol = $1", "IBM").Scan(&tickerID)
 		e.Check(err)
-		return string(output)
+
+		for _, b := range m.TimeSeries1min {
+			fmt.Printf("Adding values: %v %v %v %v %v %v\n", tickerID, b.Open, b.High, b.Low, b.Close, b.Volume)
+			valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d)", i*6+1, i*6+2, i*6+3, i*6+4, i*6+5, i*6+6))
+			valueArgs = append(valueArgs, tickerID)
+			valueArgs = append(valueArgs, b.Open)
+			valueArgs = append(valueArgs, b.High)
+			valueArgs = append(valueArgs, b.Low)
+			valueArgs = append(valueArgs, b.Close)
+			valueArgs = append(valueArgs, b.Volume)
+			i++
+		}
+
+		stmt := fmt.Sprintf("INSERT INTO dailyOHLCVs (tickerID, open, high, low, close, volume, datasource) VALUES %s", strings.Join(valueStrings, ","))
+		fmt.Print(stmt)
+		fmt.Printf("%v", valueArgs)
+
+		_, err = db.Exec(stmt, valueArgs...)
+		e.Check(err)
+		// bulk insert strategy https://stackoverflow.com/questions/12486436/how-do-i-batch-sql-statements-with-package-database-sql
+		// func BulkInsert(unsavedRows []*ExampleRowStruct) error {
+		// 	valueStrings := make([]string, 0, len(unsavedRows))
+		// 	valueArgs := make([]interface{}, 0, len(unsavedRows) * 3)
+		// 	i := 0
+		// 	for _, post := range unsavedRows {
+		// 		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d, $%d)", i*3+1, i*3+2, i*3+3))
+		// 		valueArgs = append(valueArgs, post.Column1)
+		// 		valueArgs = append(valueArgs, post.Column2)
+		// 		valueArgs = append(valueArgs, post.Column3)
+		// 		i++
+		// 	}
+		// 	stmt := fmt.Sprintf("INSERT INTO my_sample_table (column1, column2, column3) VALUES %s", strings.Join(valueStrings, ","))
+		// 	_, err := db.Exec(stmt, valueArgs...)
+		// 	return err
+		// }
+	case "APIs.DailyOHLCVs":
+		var m APIs.DailyOHLCVs
+		err := decoder.Decode(&m)
+		e.Check(err)
+
+		var tickerID int
+		err = db.QueryRow("SELECT TickerID FROM tickers WHERE TickerSymbol = $1", "IBM").Scan(&tickerID)
+		e.Check(err)
+		fmt.Print("ticker id is")
+		fmt.Print(tickerID)
+
+		for date, m := range m.TimeSeries {
+			_, err = db.Exec(`
+    INSERT INTO dailyOHLCVs (tickerID, date, open, high, low, close, volume, datasource)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`, tickerID, date, m.Open, m.High,
+				m.Low, m.Close, m.Volume, 1) // 1= alphavantage
+			e.Check(err)
+		}
+	// case "APIs.TGLATs": // did not add to postgres, suspect unneeded
+	// 	var m APIs.TGLATs // #todo suspect not properly implemented
+	// 	err := decoder.Decode(&m)
+	// 	e.Check(err)
+	// 	output, err := json.Marshal(m) // perhaps change, but 3 maps
+	// 	e.Check(err)
+	// 	return string(output)
 	default: // why do i need this? wont trigger, hm
 		panic("confident I don't need this")
 

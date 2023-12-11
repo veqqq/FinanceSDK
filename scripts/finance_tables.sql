@@ -108,8 +108,6 @@ CREATE TABLE stock_overviews (
     ev_to_revenue decimal,
     ev_to_ebitda decimal,
     beta decimal,
-    week_high decimal,
-    week_low decimal,
     day_moving_average_50 decimal,
     day_moving_average_200 decimal,
     shares_outstanding decimal,
