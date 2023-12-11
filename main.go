@@ -3,10 +3,12 @@ package main
 import (
 	"FinanceSDK/APIs"
 	"FinanceSDK/e"
+	"bufio"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -20,15 +22,24 @@ import (
 // accepts multiple args and turns them into one string
 // makes all caps, puts relevant thingslike bond, overview etc. first
 func GetTickerFromUser() string {
-	var userInput string
+	fmt.Println("Enter Ticker. N.b. prefereds use a hyphen (PBR-A):")
 
-	if len(os.Args) < 2 {
-		fmt.Println("Enter Stock Ticker. N.b. prefereds use a hyphen (PBR-A):")
-		fmt.Scanln(&userInput)
-		userInput = strings.TrimSuffix(userInput, "\n") // terminal adds newline...
-	} else {
-		userInput = strings.Join(os.Args[1:], " ")
+	var userInput, arg1, arg2, arg3 string
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	line := scanner.Text()
+	args := strings.Fields(line)
+	if len(args) > 0 {
+		arg1 = args[0]
 	}
+	if len(args) > 1 {
+		arg2 = args[1]
+	}
+	if len(args) > 2 {
+		arg3 = args[2]
+	}
+	userInput = arg1 + " " + arg2 + " " + arg3
+
 	userInput = strings.ToUpper(userInput)
 
 	// put overview, bond etc. as the first word before returning, so it can accept ewz overview, also.
@@ -68,7 +79,7 @@ func GetTickerFromUser() string {
 // build a base url, fetching the apikey from .env file
 // lazy implementation from godotenv to reduce dependencies
 func buildBaseURL() string {
-	f, err := (os.Open(".env"))
+	f, err := (os.Open("e/.env")) // e for err, but hide from docker
 	e.Check(err)
 	defer f.Close()
 
@@ -104,7 +115,6 @@ func buildBaseURL() string {
 // ticker's a string with spaces, check the first word in the switch statement (e.g. overview ewz -> OVERVIEW EWZ)
 // this frist word picks the func/querry type
 func QueryBuilder(ticker string) (url string) {
-
 	// the actual ticker comes after
 	tickerFirst := strings.Fields(ticker)[0]
 	var dateRegexIsTrue string
@@ -450,73 +460,132 @@ func init() {
 	baseUrl = buildBaseURL()
 }
 
+func WhatDoesUserWantToDo() {
+	var choice int
+
+	// open DB
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+"password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname)
+	db, err := sql.Open("postgres", psqlInfo) // first arg is driver name (pq!)
+	e.Check(err)
+
+	fmt.Print("What do you want to do?\n1. Add a ticker\n2. Let DB Update\n3. Save ticker as local json (v0.1)\n4. Exit\n")
+	fmt.Scan(&choice)
+
+mainchoice:
+	switch choice {
+	case 1:
+		var newtickers []Job
+		for {
+			ticker := GetTickerFromUser() // sanatize inputs, nothing wrong besides forex should get through
+			fmt.Println(ticker)
+
+			// n = only ohcvls, a = accounting docs and ohcvls, i = intraday ohcvls
+			msg := "\nHow often is this needed?\n" +
+				"q. Quarterly\nm. monthly\n"
+			importance := GetSanatizedInput(msg, "m", "q")
+
+			newticker := Job{
+				TickerSymbol: ticker,
+				Importance:   importance,
+			}
+
+			newtickers = append(newtickers, newticker)
+
+			willUserContinue := GetSanatizedInput("Do you want to add more tickers? y or n\n", "y", "n")
+			if willUserContinue == "n" {
+				fmt.Println(newtickers)
+				// AddTickersToDB(db, newtickers)
+				break mainchoice
+			}
+		}
+
+	case 2:
+		// build jobqueue
+		// check if last updated is null
+		// check if last updated is further back than the importance period
+
+		tickers, err := GetJobQueue(db) // implement
+		e.Check(err)
+		fmt.Print(tickers)
+		// url := QueryBuilder(ticker)
+		// resp, err := http.Get(url)
+		// 	e.Check(err)
+		//	defer resp.Body.Close()
+		// finalData := UnmarshalJson(resp.Body)
+
+		// AddToPostgres(db, finalData) // implement
+	case 3:
+		// v0.1 functionality
+		ticker := GetTickerFromUser()
+		url := QueryBuilder(ticker)
+		fmt.Println(url)
+
+		resp, err := http.Get(url)
+		e.Check(err)
+		defer resp.Body.Close()
+		finalData := ReformatJson(resp.Body)
+		WriteToFile(ticker, finalData)
+	case 4:
+		fmt.Println("Exiting program.")
+		os.Exit(0)
+	default:
+		fmt.Println("Input not allowed")
+	}
+}
+
 func main() {
-	// // v0.1
-	// ticker := GetTickerFromUser()
-	// url := QueryBuilder(ticker)
 
-	// resp, err := http.Get(url)
-	// e.Check(err)
-	// defer resp.Body.Close()
-	// finalData := ReformatJson(resp.Body)
-	// WriteToFile(ticker, finalData)
-
-	GetTickerFromJobQueue() // implement
-	// url := QueryBuilder(ticker)
-	// resp, err := http.Get(url)
-	// 	e.Check(err)
-	//	defer resp.Body.Close()
-
-	AddToPostgres(Ticker, finalData) // implement
+	for {
+		WhatDoesUserWantToDo()
+	}
 }
 
 // DB stuff
 const (
-	host     = "jsontosql_db_1" // "127.0.0.1" // use docker name if from docker, ip if not in container!
+	host     = "127.0.0.1" // "jsontosql_db_1" // "127.0.0.1" // use docker name if from docker, ip if not in container!
 	port     = 5432
 	user     = "postgres"
 	password = "password2"
-	dbname   = "humans"
+	dbname   = "financial_markets"
 )
 
-func GetTickerFromJobQueue() {
-	// plumbing
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-		"password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
-	db, err := sql.Open("postgres", psqlInfo) // first arg is driver name (pq!)
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
-	err = db.Ping()
-	if err != nil {
-		panic(err)
-	}
-
+type Job struct {
+	TickerSymbol string
+	Importance   string
 }
 
-func AddToPostgres(people []Person) {
+func GetJobQueue(db *sql.DB) ([]Job, error) {
+	rows, err := db.Query("SELECT TickerSymbol, importance FROM tickers")
+	e.Check(err)
+	defer rows.Close()
 
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-		"password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
-	db, err := sql.Open("postgres", psqlInfo) // first arg is driver name (pq!)
-	if err != nil {
-		panic(err)
+	var jobQueue []Job
+
+	for rows.Next() {
+		var job Job
+		if err := rows.Scan(&job.TickerSymbol, &job.Importance); err != nil {
+			return nil, err
+		}
+		jobQueue = append(jobQueue, job)
 	}
-	defer db.Close()
 
-	err = db.Ping()
-	if err != nil {
-		panic(err)
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
-	for _, person := range people {
-		_, err = db.Exec(`INSERT INTO people (FirstName, LastName, Latitude, Longitude, Username, passwd, Email, DateOfBirth)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-			person.FirstName, person.LastName, person.Latitude, person.Longitude,
-			person.Email, person.Username, person.Password, person.DateOfBirth)
+	return jobQueue, nil
+}
+
+func AddTickersToDB(db *sql.DB, jobs []Job) {
+
+	err := db.Ping()
+	e.Check(err)
+
+	for _, job := range jobs {
+		_, err = db.Exec(`INSERT INTO tickers (TickerSymbol, LastName)
+	VALUES ($1, $2)`,
+			job.TickerSymbol, job.Importance)
 		if err != nil {
 			if strings.Contains(err.Error(), "duplicate") {
 				fmt.Println("Duplicate value not saved")
@@ -524,5 +593,19 @@ func AddToPostgres(people []Person) {
 				panic(err)
 			}
 		}
+	}
+}
+
+func GetSanatizedInput(msg string, args ...string) string {
+	for {
+		fmt.Println(msg)
+		var userInput string
+		fmt.Scan(&userInput)
+		for _, arg := range args {
+			if userInput == arg {
+				return userInput
+			}
+		}
+		fmt.Printf("Invalid input")
 	}
 }

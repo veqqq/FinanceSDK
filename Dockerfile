@@ -1,5 +1,3 @@
-# ###
-
 # FROM golang:alpine as builder
 # #overcome tls: failed to verify certificate: x509
 # RUN apk update && apk upgrade && apk add --no-cache ca-certificates && \

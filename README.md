@@ -30,6 +30,7 @@
     - build go cli
     - docker-compose build and up -d (how to deal with different environments?)
 - add testing
+- add forex to jobqueue somehow
 
 - deploy to oracle, turso
 

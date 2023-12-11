@@ -22,13 +22,13 @@ CREATE TABLE tickers (
     TickerSymbol varchar unique,
     type varchar, -- stock, etf, macro, commodity? Manual labling?
     lastupdated date,
-    focus varchar -- how often to update
+    importance varchar -- how often to update
     -- q = quarterly, m = monthly
 );
 
 Create TABLE jobqueue (
     TickerID int REFERENCES tickers(TickerID),
-    depth varchar -- n = only ohcvls, a = accounting docs and ohcvls, i = intraday ohcvls
+    Depth varchar -- n = only ohcvls, a = accounting docs and ohcvls, i = intraday ohcvls
 );
 
 CREATE TABLE datasources (
