@@ -3,35 +3,32 @@
 -- REVOKE ALL ON SCHEMA public FROM public;
 
 /*
-You will want to create an index on the Prices table for the
+Create an index on the Prices table for the
 following columns as such (TickerId, AsOfDateTime, Price). This will allow you 
 to efficiently search for a set of prices for a given ticker over a range of dates. 
 A B-Tree index has a search time complexity of O(Log(n)) so it will be very fast
- to find a subset of the data, even with billions of records in the table.
+to find a subset of the data, even with billions of records in the table.
 */
 
-/*  
-All trading instruments are stored in a single table. We also have a clustered 
-index on symbol, date and time columns.
-
-For daily data, we have a separate table and do not use the Time column. Volume
-datatype is also bigint instead of int.
-
-We track splits and dividends on a daily basis and delete and then bulk insert 
+/*
+Track splits and dividends on a daily basis and delete and then bulk insert 
 data for every symbol that needs to be changed.
 */
 
-### jobqueue (human can add to this, updater service checks tickers' last updated etc. and overview's industry)
-    id
-    all boolean, ('n' means it only fetches ohcvls, 'y' gets new accounting docs)
-
+-- jobqueue (human can add to this, updater service checks tickers' last updated etc. and overview's industry)
   
 CREATE TABLE tickers (
     TickerID serial primary key,
-    TickerSymbol varchar,
+    TickerSymbol varchar unique,
     type varchar, -- stock, etf, macro, commodity? Manual labling?
     lastupdated date,
-    focus varchar -- how often to update, daily or quarterly / how much i care
+    focus varchar -- how often to update
+    -- q = quarterly, m = monthly
+);
+
+Create TABLE jobqueue (
+    TickerID int REFERENCES tickers(TickerID),
+    depth varchar -- n = only ohcvls, a = accounting docs and ohcvls, i = intraday ohcvls
 );
 
 CREATE TABLE datasources (
@@ -65,6 +62,10 @@ CREATE TABLE intradayOHLCVs (
 );
 
 -- 3 accounting docs + overview (only quarterly, not annual):
+-- #todo unify the statements after testing a few hundred docs
+-- to verify e.g. net_income will always be the same
+-- descrepencies are very possible and missing them would
+-- corrupt all data, so even if not finding them in the data, perhaps best to keep them isolated
 
 CREATE TABLE stock_overviews (
     id int REFERENCES tickers(TickerID),
@@ -212,7 +213,8 @@ CREATE TABLE cash_flow_statements (
     dividend_payout_common_stock decimal,
     dividend_payout_preferred_stock decimal,
     proceeds_from_issuance_of_common_stock decimal,
-    proceeds_from_issuance_of_long_term_debt_and_capital_securities_net decimal,
+    --  proceeds_from_issuance_of_long_term_debt_and_capital_securities_net is too long
+    proceeds_from_issuance_of_long_term_debt_and_capital_securities decimal,
     proceeds_from_issuance_of_preferred_stock decimal,
     proceeds_from_repurchase_of_equity decimal,
     proceeds_from_sale_of_treasury_stock decimal,
@@ -225,7 +227,7 @@ CREATE TABLE cash_flow_statements (
 -- Commodities and macro, the types are hard here
 -- e.g.: sugar: value":"24.9216494133885 <- 15!
 CREATE TABLE commodities ( -- commodities and macro indicators
-  id REFERENCES tickers(TickerID), -- these specific tickers have different formats ~
+  id int REFERENCES tickers(TickerID), -- these specific tickers have different formats
   date date,
   value decimal(16,12),
   datasource int REFERENCES datasources(SourceID)

@@ -18,10 +18,8 @@
 ### To Do:
 - check #todos in the code
 
-- Postgres
-    - postgres access funcs
-    - finish schema
-- add job queue to sql table
+- postgres access funcs
+
 - go CLI to add to job queue (and get basic info from db?)
 - go program to update based on job queue
     - check lastupdateds to populate jobqueue

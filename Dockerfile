@@ -1,39 +1,32 @@
-FROM postgres:alpine
+# ###
 
-COPY ./scripts/tables.sql /docker-entrypoint-initdb.d
+# FROM golang:alpine as builder
+# #overcome tls: failed to verify certificate: x509
+# RUN apk update && apk upgrade && apk add --no-cache ca-certificates && \
+# update-ca-certificates
 
-###
+# RUN mkdir ../home/app
 
-FROM golang:alpine as builder
-#overcome tls: failed to verify certificate: x509
-RUN apk update && apk upgrade && apk add --no-cache ca-certificates && \
-update-ca-certificates
+# WORKDIR ../home/app
 
-RUN mkdir ../home/app
+# COPY . .
 
-WORKDIR ../home/app
+# RUN go mod download
 
-COPY . .
+# RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o mybinary
 
-RUN go mod download
+# ####
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o mybinary
+# FROM scratch
 
-####
+# COPY --from=builder /home/app/mybinary .
 
-FROM scratch
+# COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-COPY --from=builder /home/app/mybinary .
-
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-
-ENTRYPOINT ["./mybinary"]
-
-
+# ENTRYPOINT ["./mybinary"]
 
 # ------- how to get around
-# // panic: Get "https://dummyjson.com/users": tls: failed to verify certificate: x509: certificate signed by unknown authority
-
+# // panic: tls: failed to verify certificate: x509: certificate signed by unknown authority
 
 # use CA bundle in Dockerfile along these lines
 # # Copy the CA certificate into the image

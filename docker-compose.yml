@@ -20,22 +20,24 @@ services:
       - ./scripts/:/docker-entrypoint-initdb.d
       - db:/var/lib/postgresql/data
       # what build path? #idempotent, will only run if data dir is empty
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d users"]
-      start_period: 0s
-      interval: 2s
-      timeout: 2s
-      retries: 5
-  stockdatasdk: -- no nt here!
-    container_name: saver
-    build:
-      dockerfile: saver_dockerfile
-      context: .
-    links:
-      - db
-    depends_on:
-      db:
-        condition: service_healthy
+ 
+  # currently just the DB
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres -d users"]
+  #     start_period: 0s
+  #     interval: 2s
+  #     timeout: 2s
+  #     retries: 5
+  # updater: -- no nt here!
+  #   container_name: updater
+  #   build:
+  #     dockerfile: updater_dockerfile
+  #     context: .
+  #   links:
+  #     - db
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
 volumes: #docker volume ls // see volume attached to this container
   db:
     driver: local

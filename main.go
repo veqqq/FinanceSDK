@@ -3,10 +3,10 @@ package main
 import (
 	"FinanceSDK/APIs"
 	"FinanceSDK/e"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -95,6 +95,7 @@ func buildBaseURL() string {
 	// }
 	apiKey = "?apikey=" + apiKey
 	return "https://www.alphavantage.co//query" + apiKey + "&function="
+	// #todo currently coupled to alphavantage
 
 }
 
@@ -450,14 +451,78 @@ func init() {
 }
 
 func main() {
-	ticker := GetTickerFromUser()
-	url := QueryBuilder(ticker)
+	// // v0.1
+	// ticker := GetTickerFromUser()
+	// url := QueryBuilder(ticker)
 
-	resp, err := http.Get(url) // later become new func?
-	e.Check(err)
-	defer resp.Body.Close()
-	finalData := ReformatJson(resp.Body)
-	WriteToFile(ticker, finalData)
+	// resp, err := http.Get(url)
+	// e.Check(err)
+	// defer resp.Body.Close()
+	// finalData := ReformatJson(resp.Body)
+	// WriteToFile(ticker, finalData)
 
-	fmt.Println(url) // just nice to have
+	GetTickerFromJobQueue() // implement
+	// url := QueryBuilder(ticker)
+	// resp, err := http.Get(url)
+	// 	e.Check(err)
+	//	defer resp.Body.Close()
+
+	AddToPostgres(Ticker, finalData) // implement
+}
+
+// DB stuff
+const (
+	host     = "jsontosql_db_1" // "127.0.0.1" // use docker name if from docker, ip if not in container!
+	port     = 5432
+	user     = "postgres"
+	password = "password2"
+	dbname   = "humans"
+)
+
+func GetTickerFromJobQueue() {
+	// plumbing
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
+		"password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname)
+	db, err := sql.Open("postgres", psqlInfo) // first arg is driver name (pq!)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+	err = db.Ping()
+	if err != nil {
+		panic(err)
+	}
+
+}
+
+func AddToPostgres(people []Person) {
+
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
+		"password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname)
+	db, err := sql.Open("postgres", psqlInfo) // first arg is driver name (pq!)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	err = db.Ping()
+	if err != nil {
+		panic(err)
+	}
+
+	for _, person := range people {
+		_, err = db.Exec(`INSERT INTO people (FirstName, LastName, Latitude, Longitude, Username, passwd, Email, DateOfBirth)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			person.FirstName, person.LastName, person.Latitude, person.Longitude,
+			person.Email, person.Username, person.Password, person.DateOfBirth)
+		if err != nil {
+			if strings.Contains(err.Error(), "duplicate") {
+				fmt.Println("Duplicate value not saved")
+			} else {
+				panic(err)
+			}
+		}
+	}
 }
