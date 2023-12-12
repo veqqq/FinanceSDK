@@ -16,9 +16,9 @@ func Check(err error) {
 func CheckDBInsert(err error, ticker, typeOfStructType string, m any) {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		fmt.Println(ticker + "experienced an error")
-		fmt.Println(typeOfStructType + "indicates intended sql table")
 		fmt.Println(m)
+		fmt.Println(ticker + " experienced an error")
+		fmt.Println(typeOfStructType + " indicates intended sql table")
 		fmt.Println("End of Error Message")
 		os.Exit(-1)
 	}

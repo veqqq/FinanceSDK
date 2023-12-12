@@ -229,16 +229,16 @@ func QueryBuilder(ticker string) (url string) {
 		structType = "APIs.CommodityPrices"
 		return
 	// REAL_GDP
-	case "GDP":
+	case "GDP", "REAL_GDP":
 		url = baseUrl + "REAL_GDP" + "&interval=quarterly"
 		structType = "APIs.CommodityPrices"
 		return
 	// real gdp per cap
-	case "GDPPC", "GDPPERCAP":
+	case "GDPPC", "GDPPERCAP", "REAL_GDP_PER_CAPITA":
 		url = baseUrl + "REAL_GDP_PER_CAPITA" + "&interval=quarterly"
 		structType = "APIs.CommodityPrices"
 		return
-	case "FEDFUNDSRATE", "FEDFUNDS", "FUNDS", "EFFECTIVEFEDERALFUNDSRATE", "EFFR":
+	case "FEDFUNDSRATE", "FEDFUNDS", "FUNDS", "EFFECTIVEFEDERALFUNDSRATE", "EFFR", "FEDERAL_FUNDS_RATE":
 		url = baseUrl + "FEDERAL_FUNDS_RATE" + "&interval=daily"
 		structType = "APIs.CommodityPrices"
 		return
@@ -252,7 +252,7 @@ func QueryBuilder(ticker string) (url string) {
 		structType = "APIs.CommodityPrices"
 		return
 	// retail sales - RETAIL_SALES
-	case "RETAILSALES", "RETAIL":
+	case "RETAILSALES", "RETAIL", "RETAIL_SALES":
 		url = baseUrl + "RETAIL_SALES"
 		structType = "APIs.CommodityPrices"
 		return
@@ -267,7 +267,7 @@ func QueryBuilder(ticker string) (url string) {
 		structType = "APIs.CommodityPrices"
 		return
 	// nonfarm payroll
-	case "NONFARMPAYROLL", "NONFARM", "PAYROLL", "EMPLOYMENT":
+	case "NONFARMPAYROLL", "NONFARM", "PAYROLL", "EMPLOYMENT", "NONFARM_PAYROLL":
 		url = baseUrl + "NONFARM_PAYROLL"
 		structType = "APIs.CommodityPrices"
 		return
@@ -509,6 +509,7 @@ mainchoice:
 
 		tickers, err := GetJobQueue(db)
 		e.Check(err)
+		fmt.Print(tickers)
 		fmt.Print("\n")
 
 		for _, ticker := range tickers {
@@ -518,22 +519,14 @@ mainchoice:
 			req.Header.Add("X-RapidAPI-Host", "alpha-vantage.p.rapidapi.com")
 
 			resp, err := http.DefaultClient.Do(req)
-
 			e.Check(err)
 			defer resp.Body.Close()
-			err = db.Ping()
-			e.Check(err)
+
 			fmt.Println(url)
 			fmt.Println(structType)
 
-			body, _ := io.ReadAll(resp.Body)
-
-			fmt.Print("\n")
-			fmt.Println(body)
-			fmt.Println(resp)
-			fmt.Print("\n")
-
 			JsonToPostgres(db, ticker.TickerSymbol, resp.Body)
+			time.Sleep(3 * time.Second) // to not overload the api
 		}
 	case 3:
 		// v0.1 functionality
@@ -621,8 +614,7 @@ func UpdateJobQueue(db *sql.DB) {
 				fmt.Printf("%s, ", job.TickerSymbol)
 				updatequeue = append(updatequeue, job) // Add job to the slice
 			}
-		default:
-			continue
+
 		}
 	}
 	fmt.Print("\n\n")
@@ -630,7 +622,7 @@ func UpdateJobQueue(db *sql.DB) {
 	var failedlist string
 	for _, job := range updatequeue {
 		_, err = db.Exec(`INSERT INTO jobqueue (TickerID, TickerSymbol)
-	VALUES ($1, $2)`, //  ON CONFLICT (TickerSymbol) DO NOTHING
+	VALUES ($1, $2)`,
 			job.TickerID, job.TickerSymbol)
 		if err != nil {
 			if strings.Contains(err.Error(), "duplicate") {
@@ -722,7 +714,7 @@ func JsonToPostgres(db *sql.DB, ticker string, resp io.Reader) { // globalvar st
         analyst_target_price, trailing_pe, forward_pe, price_to_sales_ratio_ttm, price_to_book_ratio,
         ev_to_revenue, ev_to_ebitda, beta, day_moving_average_50,
         day_moving_average_200, shares_outstanding, dividend_date, ex_dividend_date)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+		VALUES (2$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
         $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38,
         $39, $40, $41, $42, $43, $44)`,
 			tickerID, m.Symbol, m.AssetType, m.Name,
@@ -858,11 +850,7 @@ func JsonToPostgres(db *sql.DB, ticker string, resp io.Reader) { // globalvar st
 	// WTI, BRENT, nat gas, COPPER, ALUMINUM, WHEAT, CORN, COTTON, SUGAR, COFFEE
 	case "APIs.CommodityPrices":
 		var m APIs.CommodityPrices
-		fmt.Printf("%v", m)
-
 		err := decoder.Decode(&m)
-
-		fmt.Printf("%v", m)
 		e.Check(err)
 		tickerID := GetTickerID(db, ticker)
 		for _, commodityData := range m.Data {
@@ -870,9 +858,8 @@ func JsonToPostgres(db *sql.DB, ticker string, resp io.Reader) { // globalvar st
 			e.Check(err)
 			_, err = db.Exec(`
 				INSERT INTO commodities (TickerID, TickerSymbol, date, value, datasource)
-				VALUES ($1, $2, $3, $4, $5)`,
-				tickerID, ticker, date, commodityData.Value, 1,
-			)
+				VALUES ($1, $2, $3, $4, $5) ON CONFLICT (TickerID, date, datasource) DO NOTHING`,
+				tickerID, ticker, date, commodityData.Value, 1)
 			e.CheckDBInsert(err, ticker, structType, m)
 		}
 		//bulk insert doesnt work
@@ -946,7 +933,7 @@ func JsonToPostgres(db *sql.DB, ticker string, resp io.Reader) { // globalvar st
 		e.Check(err)
 		tickerID := GetTickerID(db, ticker)
 		for date, m := range m.TimeSeries {
-			_, err = db.Exec(`INSERT INTO dailyOHLCVs (TickerID, TyckerSymbol, date, open, high, low, close, volume, datasource)
+			_, err = db.Exec(`INSERT INTO dailyOHLCVs (TickerID, TickerSymbol, date, open, high, low, close, volume, datasource)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);`, tickerID, ticker, date, m.Open, m.High,
 				m.Low, m.Close, m.Volume, 1) // 1= alphavantage
 			e.CheckDBInsert(err, ticker, structType, m)
@@ -981,9 +968,7 @@ func UpdateLastUpdated(db *sql.DB, ticker string) {
 }
 
 func RemoveFromJobQueue(db *sql.DB, ticker string) {
-	_, err := db.Exec(`
-	
-	`)
+	_, err := db.Exec(`DELETE FROM JobQueue WHERE TickerSymbol = $1`, ticker)
 	e.Check(err)
 
 }

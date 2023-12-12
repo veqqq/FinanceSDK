@@ -17,22 +17,15 @@
 
 ### To Do:
 - check #todos in the code
-
-- postgres access funcs
-    - test inserts in jsontopostgres
-        - intraday might be broken, unsure
-
-- go program to update based on job queue
-    - check lastupdateds to populate jobqueue
-    - then update
+    - how to check if insert was successful? Check before removing from jobqueue
 - go CLI get basic info from db?
-- manage secrets better
 
+- manage secrets better
 - bash install script
     - build go cli
     - docker-compose build and up -d (how to deal with different environments?)
 - add testing
-- add forex to jobqueue somehow
+- add forex to jobqueue etc.
 
 - deploy to oracle, turso
 
@@ -48,6 +41,18 @@ Usage:
 - `sudo docker-compose up -d`
 
 - *go build*
+
+UPDATE tickers
+SET lastupdated = current_date - interval '2 months'
+WHERE tickerid NOT IN (SELECT DISTINCT tickerid FROM commodities);
+
+UPDATE tickers
+SET lastupdated = current_date - interval '2 months'
+WHERE tickersymbol = 'MT';
+
+SELECT DISTINCT TickerID FROM commodities;
+
+sudo docker exec -it pgsql-dev bash
 
 ### Implementation
 - Technologies:

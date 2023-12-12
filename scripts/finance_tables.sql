@@ -233,8 +233,9 @@ CREATE TABLE commodities ( -- commodities and macro indicators
     TickerID int REFERENCES tickers(TickerID),
     TickerSymbol varchar REFERENCES tickers(TickerSymbol),  -- these specific tickers have different formats
     date date,
-    value decimal(16,12),
-    datasource int REFERENCES datasources(SourceID)
+    value decimal(20,12),
+    datasource int REFERENCES datasources(SourceID),
+    primary key (TickerID, value, date, datasource) -- makes sure each date tickerID combo is unique
 );
 
 -- #todo
