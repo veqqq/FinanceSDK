@@ -79,7 +79,7 @@ CREATE TABLE stock_overviews (
     sector varchar,
     industry varchar,
     address varchar,
-    fiscal_year_end varchar,
+    fiscal_year_end varchar unique,
     latest_quarter varchar,
     market_capitalization decimal,
     ebitda decimal,
@@ -116,7 +116,7 @@ CREATE TABLE stock_overviews (
 
 CREATE TABLE income_statements (
     id int REFERENCES tickers(TickerID),
-    fiscal_date_ending date,
+    fiscal_date_ending date unique,
     reported_currency varchar,
     gross_profit decimal,
     total_revenue decimal,
@@ -146,7 +146,7 @@ CREATE TABLE income_statements (
 
 CREATE TABLE balance_sheets (
     id int REFERENCES tickers(TickerID),
-    fiscal_date_ending date,
+    fiscal_date_ending date unique,
     reported_currency varchar,
     total_assets decimal,
     total_current_assets decimal,
@@ -188,7 +188,7 @@ CREATE TABLE balance_sheets (
 
 CREATE TABLE cash_flow_statements (
     id int REFERENCES tickers(TickerID),
-    fiscal_date_ending date, -- should adjust the go struct type
+    fiscal_date_ending date unique,
     reported_currency varchar,
     operating_cashflow decimal,
     payments_for_operating_activities decimal,

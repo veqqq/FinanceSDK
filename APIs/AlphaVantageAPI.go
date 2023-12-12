@@ -8,6 +8,8 @@ import (
 	"strconv"
 )
 
+// earningsstatements, tglats, sentiment are not used/implemented in sql
+
 // Custom Types
 
 // Custom loat64 to handle nulls etc. when unmarshaling
