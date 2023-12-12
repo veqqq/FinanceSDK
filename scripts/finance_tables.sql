@@ -14,8 +14,6 @@ to find a subset of the data, even with billions of records in the table.
 Track splits and dividends on a daily basis and delete and then bulk insert 
 data for every symbol that needs to be changed.
 */
-
--- jobqueue (human can add to this, updater service checks tickers' last updated etc. and overview's industry)
   
 CREATE TABLE tickers (
     TickerID serial primary key,
@@ -26,8 +24,10 @@ CREATE TABLE tickers (
     -- q = quarterly, m = monthly
 );
 
+-- jobqueue (human can add to this, updater service checks tickers' last updated etc. and overview's industry)
 Create TABLE jobqueue (
     TickerID int REFERENCES tickers(TickerID),
+    TickerSymbol REFERENCES tickers(TickerSymbol),
     Depth varchar -- n = only ohcvls, a = accounting docs and ohcvls, i = intraday ohcvls
 );
 
@@ -39,7 +39,7 @@ CREATE TABLE datasources (
 
 CREATE TABLE dailyOHLCVs (
     TickerID int REFERENCES tickers(TickerID),
-    date date,
+    TickerSymbol REFERENCES tickers(TickerSymbol),    date date,
     open decimal(10, 2),
     high decimal(10, 2),
     low decimal(10, 2),
@@ -51,6 +51,7 @@ CREATE TABLE dailyOHLCVs (
 
 CREATE TABLE intradayOHLCVs (
     TickerID int REFERENCES tickers(TickerID),
+    TickerSymbol REFERENCES tickers(TickerSymbol),  
     timestamp timestamp,
     open decimal(10, 2),
     high decimal(10, 2),
@@ -68,7 +69,8 @@ CREATE TABLE intradayOHLCVs (
 -- corrupt all data, so even if not finding them in the data, perhaps best to keep them isolated
 
 CREATE TABLE stock_overviews (
-    id int REFERENCES tickers(TickerID),
+    TickerID int REFERENCES tickers(TickerID),
+    TickerSymbol REFERENCES tickers(TickerSymbol),
     symbol varchar REFERENCES tickers(TickerSymbol),
     asset_type varchar,
     name varchar,
@@ -115,7 +117,8 @@ CREATE TABLE stock_overviews (
 );
 
 CREATE TABLE income_statements (
-    id int REFERENCES tickers(TickerID),
+    TickerID int REFERENCES tickers(TickerID),
+    TickerSymbol REFERENCES tickers(TickerSymbol),
     fiscal_date_ending date unique,
     reported_currency varchar,
     gross_profit decimal,
@@ -145,7 +148,8 @@ CREATE TABLE income_statements (
 );
 
 CREATE TABLE balance_sheets (
-    id int REFERENCES tickers(TickerID),
+    TickerID int REFERENCES tickers(TickerID),
+    TickerSymbol REFERENCES tickers(TickerSymbol),
     fiscal_date_ending date unique,
     reported_currency varchar,
     total_assets decimal,
@@ -187,7 +191,8 @@ CREATE TABLE balance_sheets (
 );
 
 CREATE TABLE cash_flow_statements (
-    id int REFERENCES tickers(TickerID),
+    TickerID int REFERENCES tickers(TickerID),
+    TickerSymbol REFERENCES tickers(TickerSymbol),
     fiscal_date_ending date unique,
     reported_currency varchar,
     operating_cashflow decimal,
@@ -224,10 +229,11 @@ CREATE TABLE cash_flow_statements (
 -- Commodities and macro, the types are hard here
 -- e.g.: sugar: value":"24.9216494133885 <- 15!
 CREATE TABLE commodities ( -- commodities and macro indicators
-  id int REFERENCES tickers(TickerID), -- these specific tickers have different formats
-  date date,
-  value decimal(16,12),
-  datasource int REFERENCES datasources(SourceID)
+    TickerID int REFERENCES tickers(TickerID),
+    TickerSymbol REFERENCES tickers(TickerSymbol),  -- these specific tickers have different formats
+    date date,
+    value decimal(16,12),
+    datasource int REFERENCES datasources(SourceID)
 );
 
 -- #todo

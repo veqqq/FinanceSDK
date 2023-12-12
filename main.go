@@ -195,7 +195,7 @@ func QueryBuilder(ticker string) (url string) {
 	// ALUMINUM
 	case "ALUMINUM":
 		url = baseUrl + "ALUMINUM" + "&interval=quarterly"
-		structType = "CommodityPrices"
+		structType = "APIs.CommodityPrices"
 		return
 	// WHEAT
 	case "WHEAT":
@@ -508,16 +508,20 @@ mainchoice:
 		// check if last updated is further back than the importance period
 
 		tickers, err := GetJobQueue(db) // implement
+
 		e.Check(err)
 		fmt.Print(tickers)
+
 		for _, ticker := range tickers {
 			url := QueryBuilder(ticker.TickerSymbol)
+
 			resp, err := http.Get(url)
 			e.Check(err)
 			defer resp.Body.Close()
-
 			err = db.Ping()
 			e.Check(err)
+			fmt.Println(url)
+			fmt.Println(structType)
 			JsonToPostgres(db, ticker.TickerSymbol, resp.Body)
 		}
 	case 3:
@@ -554,22 +558,9 @@ func main() {
 
 	// JsonToPostgres(db, "IBM", resp.Body)
 
-	// open DB
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+"password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
-	db, err := sql.Open("postgres", psqlInfo) // first arg is driver name (pq!)
-	e.Check(err)
-
-	structType = "APIs.IntradayOHLCVs"
-	url := "https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=IBM&interval=1min&outputsize=full&apikey=OMIZITLRI38PMEB5"
-	fmt.Println(url)
-	resp, _ := http.Get(url)
-
-	JsonToPostgres(db, "SUGAR", resp.Body)
-
-	// for {
-	// 	WhatDoesUserWantToDo()
-	// }
+	for {
+		WhatDoesUserWantToDo()
+	}
 }
 
 // DB stuff
@@ -583,11 +574,13 @@ const (
 
 type Job struct {
 	TickerSymbol string
+	TickerID     int
 	Importance   string
 }
 
+// #todo I can move to TickerID into this to send the job to others?
 func GetJobQueue(db *sql.DB) ([]Job, error) {
-	rows, err := db.Query("SELECT TickerSymbol, importance FROM tickers")
+	rows, err := db.Query("SELECT tickersymbol, depth FROM jobqueue")
 	e.Check(err)
 	defer rows.Close()
 
@@ -681,14 +674,14 @@ func JsonToPostgres(db *sql.DB, ticker string, resp io.Reader) { // globalvar st
 			m.PriceToBookRatio, m.EVToRevenue, m.EVToEBITDA,
 			m.Beta, m.DayMovingAverage50, m.DayMovingAverage200,
 			m.SharesOutstanding, m.DividendDate, m.ExDividendDate)
-		e.Check(err)
+		e.CheckDBInsert(err, ticker, structType, m)
 	case "APIs.IncomeStatements":
 		var m APIs.IncomeStatements
 		err := decoder.Decode(&m)
 		e.Check(err)
 		for _, m := range m.QuarterlyReports {
 			tickerID := GetTickerID(db, ticker)
-			_, err = db.Exec(`INSERT INTO income_statements (id, fiscal_date_ending, reported_currency,
+			_, err = db.Exec(`INSERT INTO income_statements (TickerID, TickerSymbol, fiscal_date_ending, reported_currency,
 			gross_profit, total_revenue, cost_of_revenue, cost_of_goods_and_services_sold,
 			operating_income, selling_general_and_administrative, research_and_development,
 			operating_expenses, investment_income_net, net_interest_income, interest_income,
@@ -697,8 +690,8 @@ func JsonToPostgres(db *sql.DB, ticker string, resp io.Reader) { // globalvar st
 			interest_and_debt_expense, net_income_from_continuing_operations,
 			comprehensive_income_net_of_tax, ebit, ebitda, net_income)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
-			$19, $20, $21, $22, $23, $24, $25, $26, $27)`,
-				tickerID, m.FiscalDateEnding, m.ReportedCurrency, m.GrossProfit,
+			$19, $20, $21, $22, $23, $24, $25, $26, $27, $28)`,
+				tickerID, ticker, m.FiscalDateEnding, m.ReportedCurrency, m.GrossProfit,
 				m.TotalRevenue, m.CostOfRevenue, m.CostofGoodsAndServicesSold,
 				m.OperatingIncome, m.SellingGeneralAndAdministrative, m.ResearchAndDevelopment,
 				m.OperatingExpenses, m.InvestmentIncomeNet, m.NetInterestIncome,
@@ -707,7 +700,7 @@ func JsonToPostgres(db *sql.DB, ticker string, resp io.Reader) { // globalvar st
 				m.IncomeBeforeTax, m.IncomeTaxExpense, m.InterestAndDebtExpense,
 				m.NetIncomeFromContinuingOperations, m.ComprehensiveIncomeNetOfTax,
 				m.EBIT, m.EBITDA, m.NetIncome)
-			e.Check(err)
+			e.CheckDBInsert(err, ticker, structType, m)
 		}
 	case "APIs.BalanceSheets":
 		var m APIs.BalanceSheets
@@ -715,8 +708,7 @@ func JsonToPostgres(db *sql.DB, ticker string, resp io.Reader) { // globalvar st
 		e.Check(err)
 		for _, m := range m.QuarterlyReports {
 			tickerID := GetTickerID(db, ticker)
-			_, err = db.Exec(`
-			INSERT INTO balance_sheets (id, fiscal_date_ending, reported_currency,
+			_, err = db.Exec(`INSERT INTO balance_sheets (TickerID, TickerSymbol, fiscal_date_ending, reported_currency,
 				total_assets, total_current_assets, cash_and_cash_equivalents_at_carrying_value,
 				cash_and_short_term_investments, inventory, current_net_receivables,
 				total_non_current_assets, property_plant_equipment,
@@ -729,10 +721,10 @@ func JsonToPostgres(db *sql.DB, ticker string, resp io.Reader) { // globalvar st
 				current_long_term_debt, long_term_debt_noncurrent, short_long_term_debt_total,
 				other_current_liabilities, other_non_current_liabilities, total_shareholder_equity,
 				treasury_stock, retained_earnings, common_stock, common_stock_shares_outstanding)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
 				$19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35,
-				$36, $37, $38, $39)`,
-				tickerID, m.FiscalDateEnding, m.ReportedCurrency,
+				$36, $37, $38, $39, $40)`,
+				tickerID, ticker, m.FiscalDateEnding, m.ReportedCurrency,
 				m.TotalAssets, m.TotalCurrentAssets, m.CashAndCashEquivalentsAtCarryingValue,
 				m.CashAndShortTermInvestments, m.Inventory, m.CurrentNetReceivables,
 				m.TotalNonCurrentAssets, m.PropertyPlantEquipment,
@@ -745,7 +737,7 @@ func JsonToPostgres(db *sql.DB, ticker string, resp io.Reader) { // globalvar st
 				m.CurrentLongTermDebt, m.LongTermDebtNoncurrent, m.ShortLongTermDebtTotal,
 				m.OtherCurrentLiabilities, m.OtherNonCurrentLiabilities, m.TotalShareholderEquity,
 				m.TreasuryStock, m.RetainedEarnings, m.CommonStock, m.CommonStockSharesOutstanding)
-			e.Check(err)
+			e.CheckDBInsert(err, ticker, structType, m)
 		}
 	case "APIs.CashFlowStatements":
 		var m APIs.CashFlowStatements
@@ -753,27 +745,26 @@ func JsonToPostgres(db *sql.DB, ticker string, resp io.Reader) { // globalvar st
 		e.Check(err)
 		for _, m := range m.QuarterlyReports {
 			tickerID := GetTickerID(db, ticker)
-			_, err := db.Exec(`
-					INSERT INTO cash_flow_statements (id, fiscal_date_ending, reported_currency,
-						operating_cashflow, payments_for_operating_activities,
-						proceeds_from_operating_activities, change_in_operating_liabilities,
-						change_in_operating_assets, depreciation_depletion_and_amortization,
-						capital_expenditures, change_in_receivables, change_in_inventory,
-						profit_loss, cashflow_from_investment, cashflow_from_financing,
-						proceeds_from_repayments_of_short_term_debt,
-						payments_for_repurchase_of_common_stock,
-						payments_for_repurchase_of_equity,
-						payments_for_repurchase_of_preferred_stock, dividend_payout,
-						dividend_payout_common_stock, dividend_payout_preferred_stock,
-						proceeds_from_issuance_of_common_stock,
-						proceeds_from_issuance_of_long_term_debt_and_capital_securities,
-						proceeds_from_issuance_of_preferred_stock,
-						proceeds_from_repurchase_of_equity,
-						proceeds_from_sale_of_treasury_stock,
-						change_in_cash_and_cash_equivalents, change_in_exchange_rate, net_income)
+			_, err := db.Exec(`INSERT INTO cash_flow_statements (TickerID, TickerSymbol, fiscal_date_ending, reported_currency,
+					operating_cashflow, payments_for_operating_activities,
+					proceeds_from_operating_activities, change_in_operating_liabilities,
+					change_in_operating_assets, depreciation_depletion_and_amortization,
+					capital_expenditures, change_in_receivables, change_in_inventory,
+					profit_loss, cashflow_from_investment, cashflow_from_financing,
+					proceeds_from_repayments_of_short_term_debt,
+					payments_for_repurchase_of_common_stock,
+					payments_for_repurchase_of_equity,
+					payments_for_repurchase_of_preferred_stock, dividend_payout,
+					dividend_payout_common_stock, dividend_payout_preferred_stock,
+					proceeds_from_issuance_of_common_stock,
+					proceeds_from_issuance_of_long_term_debt_and_capital_securities,
+					proceeds_from_issuance_of_preferred_stock,
+					proceeds_from_repurchase_of_equity,
+					proceeds_from_sale_of_treasury_stock,
+					change_in_cash_and_cash_equivalents, change_in_exchange_rate, net_income)
 					VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-						$18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)`,
-				tickerID, m.FiscalDateEnding,
+					$18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)`,
+				tickerID, ticker, m.FiscalDateEnding,
 				m.ReportedCurrency, m.OperatingCashflow,
 				m.PaymentsForOperatingActivities,
 				m.ProceedsFromOperatingActivities,
@@ -796,7 +787,7 @@ func JsonToPostgres(db *sql.DB, ticker string, resp io.Reader) { // globalvar st
 				m.ProceedsFromSaleOfTreasuryStock,
 				m.ChangeInCashAndCashEquivalents,
 				m.ChangeInExchangeRate, m.NetIncome)
-			e.Check(err)
+			e.CheckDBInsert(err, ticker, structType, m)
 		}
 	// Commodities and Economic Indicators - use same structure
 	// WTI, BRENT, nat gas, COPPER, ALUMINUM, WHEAT, CORN, COTTON, SUGAR, COFFEE
@@ -809,11 +800,11 @@ func JsonToPostgres(db *sql.DB, ticker string, resp io.Reader) { // globalvar st
 			date, _ := time.Parse("2006-01-02", commodityData.Date)
 			e.Check(err)
 			_, err = db.Exec(`
-				INSERT INTO commodities (id, date, value, datasource)
-				VALUES ($1, $2, $3, $4)`,
-				tickerID, date, commodityData.Value, 1,
+				INSERT INTO commodities (TickerID, TickerSymbol, date, value, datasource)
+				VALUES ($1, $2, $3, $4, $5)`,
+				tickerID, ticker, date, commodityData.Value, 1,
 			)
-			e.Check(err)
+			e.CheckDBInsert(err, ticker, structType, m)
 		}
 		//bulk insert doesnt work
 	// case "APIs.IntradayOHLCVs": // #todo totally doesnt work
@@ -851,7 +842,7 @@ func JsonToPostgres(db *sql.DB, ticker string, resp io.Reader) { // globalvar st
 	// 	fmt.Printf("%v", valueArgs)
 
 	// 	_, err = db.Exec(stmt, valueArgs...)
-	// 	e.Check(err)
+	// 			e.CheckDBInsert(err, ticker, structType, m)
 	// bulk insert strategy https://stackoverflow.com/questions/12486436/how-do-i-batch-sql-statements-with-package-database-sql
 	// func BulkInsert(unsavedRows []*ExampleRowStruct) error {
 	// 	valueStrings := make([]string, 0, len(unsavedRows))
@@ -874,11 +865,11 @@ func JsonToPostgres(db *sql.DB, ticker string, resp io.Reader) { // globalvar st
 		e.Check(err)
 		tickerID := GetTickerID(db, ticker)
 		for time, m := range m.TimeSeries1min {
-			_, err = db.Exec(`
-INSERT INTO dailyOHLCVs (tickerID, date, open, high, low, close, volume, datasource)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`, tickerID, time, m.Open, m.High,
+			_, err = db.Exec(`INSERT INTO intradayohlcvs (TickerID, TickerSymbol, timestamp, open, high, low, close, volume, datasource)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);`, tickerID, ticker, time, m.Open, m.High,
 				m.Low, m.Close, m.Volume, 1) // 1= alphavantage
-			e.Check(err)
+			e.CheckDBInsert(err, ticker, structType, m)
+
 		}
 	case "APIs.DailyOHLCVs":
 		var m APIs.DailyOHLCVs
@@ -886,16 +877,22 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`, tickerID, time, m.Open, m.High,
 		e.Check(err)
 		tickerID := GetTickerID(db, ticker)
 		for date, m := range m.TimeSeries {
-			_, err = db.Exec(`
-    INSERT INTO dailyOHLCVs (tickerID, date, open, high, low, close, volume, datasource)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`, tickerID, date, m.Open, m.High,
+			_, err = db.Exec(`INSERT INTO dailyOHLCVs (TickerID, TyckerSymbol, date, open, high, low, close, volume, datasource)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);`, tickerID, ticker, date, m.Open, m.High,
 				m.Low, m.Close, m.Volume, 1) // 1= alphavantage
-			e.Check(err)
+			e.CheckDBInsert(err, ticker, structType, m)
+
 		}
 	default: // why do i need this? wont trigger, hm
 		panic("confident I don't need this")
 
 	}
+
+	// #todo, this is updating even when nothing was updated
+	// so confirm a success first
+	// determine if really updated...
+	UpdateLastUpdated(db, ticker)
+	RemoveFromJobQueue(db, ticker)
 }
 
 func GetTickerID(db *sql.DB, ticker string) int {
@@ -903,4 +900,21 @@ func GetTickerID(db *sql.DB, ticker string) int {
 	err := db.QueryRow("SELECT TickerID FROM tickers WHERE TickerSymbol = $1", ticker).Scan(&tickerID)
 	e.Check(err)
 	return tickerID
+}
+
+func UpdateLastUpdated(db *sql.DB, ticker string) {
+	_, err := db.Exec(`
+    UPDATE tickers
+    SET lastupdated = $1
+    WHERE tickersymbol = $2
+`, time.Now(), ticker)
+	e.Check(err)
+}
+
+func RemoveFromJobQueue(db *sql.DB, ticker string) {
+	_, err := db.Exec(`
+	
+	`)
+	e.Check(err)
+
 }

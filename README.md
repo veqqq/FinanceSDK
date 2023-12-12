@@ -19,11 +19,13 @@
 - check #todos in the code
 
 - postgres access funcs
+    - test inserts in jsontopostgres
+        - intraday might be broken, unsure
 
-- go CLI get basic info from db?
 - go program to update based on job queue
     - check lastupdateds to populate jobqueue
     - then update
+- go CLI get basic info from db?
 - manage secrets better
 
 - bash install script
@@ -37,6 +39,9 @@
 - decouple from alphavantage api
     - add more apis
     - test alignment between different sources
+- optimize bulkinsert method for postgres https://stackoverflow.com/questions/12206600/how-to-speed-up-insertion-performance-in-postgresql
+
+- remove nulls e.g. in commodities:   4 | 0001-01-01 | 0.000000000000 |          1
 
 Usage:
 - `sudo docker-compose build`

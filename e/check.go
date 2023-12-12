@@ -11,3 +11,15 @@ func Check(err error) {
 		os.Exit(-1)
 	}
 }
+
+// CheckDBInsert(err, ticker, structType, m)
+func CheckDBInsert(err error, ticker, typeOfStructType string, m any) {
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		fmt.Println(ticker + "experienced an error")
+		fmt.Println(typeOfStructType + "indicates intended sql table")
+		fmt.Println(m)
+		fmt.Println("End of Error Message")
+		os.Exit(-1)
+	}
+}
