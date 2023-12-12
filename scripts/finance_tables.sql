@@ -27,7 +27,7 @@ CREATE TABLE tickers (
 -- jobqueue (human can add to this, updater service checks tickers' last updated etc. and overview's industry)
 Create TABLE jobqueue (
     TickerID int REFERENCES tickers(TickerID),
-    TickerSymbol REFERENCES tickers(TickerSymbol),
+    TickerSymbol varchar unique REFERENCES tickers(TickerSymbol),
     Depth varchar -- n = only ohcvls, a = accounting docs and ohcvls, i = intraday ohcvls
 );
 
@@ -39,7 +39,8 @@ CREATE TABLE datasources (
 
 CREATE TABLE dailyOHLCVs (
     TickerID int REFERENCES tickers(TickerID),
-    TickerSymbol REFERENCES tickers(TickerSymbol),    date date,
+    TickerSymbol varchar REFERENCES tickers(TickerSymbol),
+    date date,
     open decimal(10, 2),
     high decimal(10, 2),
     low decimal(10, 2),
@@ -51,7 +52,7 @@ CREATE TABLE dailyOHLCVs (
 
 CREATE TABLE intradayOHLCVs (
     TickerID int REFERENCES tickers(TickerID),
-    TickerSymbol REFERENCES tickers(TickerSymbol),  
+    TickerSymbol varchar REFERENCES tickers(TickerSymbol),  
     timestamp timestamp,
     open decimal(10, 2),
     high decimal(10, 2),
@@ -70,7 +71,7 @@ CREATE TABLE intradayOHLCVs (
 
 CREATE TABLE stock_overviews (
     TickerID int REFERENCES tickers(TickerID),
-    TickerSymbol REFERENCES tickers(TickerSymbol),
+    TickerSymbol varchar REFERENCES tickers(TickerSymbol),
     symbol varchar REFERENCES tickers(TickerSymbol),
     asset_type varchar,
     name varchar,
@@ -118,7 +119,7 @@ CREATE TABLE stock_overviews (
 
 CREATE TABLE income_statements (
     TickerID int REFERENCES tickers(TickerID),
-    TickerSymbol REFERENCES tickers(TickerSymbol),
+    TickerSymbol varchar REFERENCES tickers(TickerSymbol),
     fiscal_date_ending date unique,
     reported_currency varchar,
     gross_profit decimal,
@@ -149,7 +150,7 @@ CREATE TABLE income_statements (
 
 CREATE TABLE balance_sheets (
     TickerID int REFERENCES tickers(TickerID),
-    TickerSymbol REFERENCES tickers(TickerSymbol),
+    TickerSymbol varchar REFERENCES tickers(TickerSymbol),
     fiscal_date_ending date unique,
     reported_currency varchar,
     total_assets decimal,
@@ -192,7 +193,7 @@ CREATE TABLE balance_sheets (
 
 CREATE TABLE cash_flow_statements (
     TickerID int REFERENCES tickers(TickerID),
-    TickerSymbol REFERENCES tickers(TickerSymbol),
+    TickerSymbol varchar REFERENCES tickers(TickerSymbol),
     fiscal_date_ending date unique,
     reported_currency varchar,
     operating_cashflow decimal,
@@ -230,7 +231,7 @@ CREATE TABLE cash_flow_statements (
 -- e.g.: sugar: value":"24.9216494133885 <- 15!
 CREATE TABLE commodities ( -- commodities and macro indicators
     TickerID int REFERENCES tickers(TickerID),
-    TickerSymbol REFERENCES tickers(TickerSymbol),  -- these specific tickers have different formats
+    TickerSymbol varchar REFERENCES tickers(TickerSymbol),  -- these specific tickers have different formats
     date date,
     value decimal(16,12),
     datasource int REFERENCES datasources(SourceID)

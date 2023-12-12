@@ -76,6 +76,8 @@ func GetTickerFromUser() string {
 
 }
 
+var apiKey string
+
 // build a base url, fetching the apikey from .env file
 // lazy implementation from godotenv to reduce dependencies
 func buildBaseURL() string {
@@ -99,13 +101,12 @@ func buildBaseURL() string {
 		}
 	}
 
-	apiKey := os.Getenv("APIKEY")
+	apiKey = os.Getenv("X-RapidAPI-Key")
 	// apiKey, ok := os.LookupEnv("APIKEY")
 	// if !ok {
 	// 	log.Fatalf("Add API Key to .env")
 	// }
-	apiKey = "?apikey=" + apiKey
-	return "https://www.alphavantage.co//query" + apiKey + "&function="
+	return "https://alpha-vantage.p.rapidapi.com/query?" + "function="
 	// #todo currently coupled to alphavantage
 
 }
@@ -471,7 +472,7 @@ func WhatDoesUserWantToDo() {
 	db, err := sql.Open("postgres", psqlInfo) // first arg is driver name (pq!)
 	e.Check(err)
 
-	fmt.Print("What do you want to do?\n1. Add a ticker\n2. Let DB Update\n3. Save ticker as local json (v0.1) - Requires /data folder\n4. Exit\n")
+	fmt.Print("What do you want to do?\n1. Add a ticker\n2. Let DB Update\n3. Save ticker as local json (v0.1)\n4. Exit\n")
 	fmt.Scan(&choice)
 
 mainchoice:
@@ -503,25 +504,35 @@ mainchoice:
 		}
 
 	case 2:
-		// build jobqueue
-		// check if last updated is null
-		// check if last updated is further back than the importance period
 
-		tickers, err := GetJobQueue(db) // implement
+		UpdateJobQueue(db)
 
+		tickers, err := GetJobQueue(db)
 		e.Check(err)
-		fmt.Print(tickers)
+		fmt.Print("\n")
 
 		for _, ticker := range tickers {
 			url := QueryBuilder(ticker.TickerSymbol)
+			req, _ := http.NewRequest("GET", url, nil)
+			req.Header.Add("X-RapidAPI-Key", apiKey)
+			req.Header.Add("X-RapidAPI-Host", "alpha-vantage.p.rapidapi.com")
 
-			resp, err := http.Get(url)
+			resp, err := http.DefaultClient.Do(req)
+
 			e.Check(err)
 			defer resp.Body.Close()
 			err = db.Ping()
 			e.Check(err)
 			fmt.Println(url)
 			fmt.Println(structType)
+
+			body, _ := io.ReadAll(resp.Body)
+
+			fmt.Print("\n")
+			fmt.Println(body)
+			fmt.Println(resp)
+			fmt.Print("\n")
+
 			JsonToPostgres(db, ticker.TickerSymbol, resp.Body)
 		}
 	case 3:
@@ -578,9 +589,63 @@ type Job struct {
 	Importance   string
 }
 
+func UpdateJobQueue(db *sql.DB) {
+	// check if last updated is null
+	// check if last updated is further back than the importance period
+	rows, err := db.Query("SELECT TickerID, TickerSymbol, importance, lastupdated FROM tickers")
+	e.Check(err)
+	defer rows.Close()
+
+	var updatequeue []Job
+	fmt.Print("Added to queue: ")
+
+	for rows.Next() {
+		var job Job
+		var lastUpdated time.Time
+
+		if err := rows.Scan(&job.TickerID, &job.TickerSymbol, &job.Importance, &lastUpdated); err != nil {
+			fmt.Println("Error scanning row:", err)
+			continue
+		}
+
+		switch job.Importance {
+		case "m":
+			if time.Since(lastUpdated).Hours() > 24*30 { // more than a month
+				// Add logic for updating job queue
+				fmt.Printf("%s, ", job.TickerSymbol)
+				updatequeue = append(updatequeue, job) // Add job to the slice
+			}
+		case "q":
+			if time.Since(lastUpdated).Hours() > 24*30*3 { // more than a quarter
+				// Add logic for updating job queue
+				fmt.Printf("%s, ", job.TickerSymbol)
+				updatequeue = append(updatequeue, job) // Add job to the slice
+			}
+		default:
+			continue
+		}
+	}
+	fmt.Print("\n\n")
+
+	var failedlist string
+	for _, job := range updatequeue {
+		_, err = db.Exec(`INSERT INTO jobqueue (TickerID, TickerSymbol)
+	VALUES ($1, $2)`, //  ON CONFLICT (TickerSymbol) DO NOTHING
+			job.TickerID, job.TickerSymbol)
+		if err != nil {
+			if strings.Contains(err.Error(), "duplicate") {
+				failedlist += job.TickerSymbol + " "
+			} else {
+				panic(err)
+			}
+		}
+	}
+	fmt.Print("These are already on queue: " + failedlist + "\n\n")
+}
+
 // #todo I can move to TickerID into this to send the job to others?
 func GetJobQueue(db *sql.DB) ([]Job, error) {
-	rows, err := db.Query("SELECT tickersymbol, depth FROM jobqueue")
+	rows, err := db.Query("SELECT TickerID, TickerSymbol FROM jobqueue") // #todo add depth to all of this
 	e.Check(err)
 	defer rows.Close()
 
@@ -588,7 +653,7 @@ func GetJobQueue(db *sql.DB) ([]Job, error) {
 
 	for rows.Next() {
 		var job Job
-		if err := rows.Scan(&job.TickerSymbol, &job.Importance); err != nil {
+		if err := rows.Scan(&job.TickerID, &job.TickerSymbol); err != nil {
 			return nil, err
 		}
 		jobQueue = append(jobQueue, job)
@@ -793,7 +858,11 @@ func JsonToPostgres(db *sql.DB, ticker string, resp io.Reader) { // globalvar st
 	// WTI, BRENT, nat gas, COPPER, ALUMINUM, WHEAT, CORN, COTTON, SUGAR, COFFEE
 	case "APIs.CommodityPrices":
 		var m APIs.CommodityPrices
+		fmt.Printf("%v", m)
+
 		err := decoder.Decode(&m)
+
+		fmt.Printf("%v", m)
 		e.Check(err)
 		tickerID := GetTickerID(db, ticker)
 		for _, commodityData := range m.Data {
