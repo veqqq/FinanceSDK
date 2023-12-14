@@ -16,15 +16,35 @@
 
 
 ### To Do:
+- ChekDBInsert() should os.Exit() if an insert failed
+    - but e.g. CAJ (unsupported ticker) went through, updated etc.
+UPDATE tickers
+SET lastupdated = current_date - interval '4 months'
+WHERE (type LIKE '%stock%' or type LIKE '%ETF%')
+AND NOT EXISTS (
+    SELECT 1
+    FROM dailyOHLCVs
+    WHERE dailyOHLCVs.TickerID = tickers.TickerID
+);
+    
+- make an interface of all types like
+    APIs.DailyOHLCV
+    - can probably restructure those huge switches
+    - should implement "is nil" for a e.Check test
+
 - check #todos in the code
-    - how to check if insert was successful? Check before removing from jobqueue
-- go CLI get basic info from db?
-4
+
 - manage secrets better
 - bash install script
     - build go cli
     - docker-compose build and up -d (how to deal with different environments?)
 - add testing
+- change logic of TickerID (when it's fetched etc.)
+
+- go CLI get basic info from db? (how many rows etc.)
+- add something like "coverage" to determine if you should get dailies, intraday, financial docs...
+    - makes confirming something was successfully updated difficult, must check many things. How to deal with failure midway?
+    - intraday should only be gotten through this, entering e.g. "CLF 2021-04" in CLI will make a new ticker wih that date...
 - add forex to jobqueue etc.
     - use this format: JPY:EUR
 - deploy to oracle, turso
@@ -34,6 +54,9 @@
     - val in commodities 158461.000000000000
         - -36.980000000000 lol i remember that day WTI
 
+
+- add "type" to ticker input
+    - 
 - decouple from alphavantage api
     - add more apis
     - test alignment between different sources
@@ -59,11 +82,32 @@ WHERE tickerid NOT IN (SELECT DISTINCT tickerid FROM commodities);
 
 UPDATE tickers
 SET lastupdated = current_date - interval '2 months'
-WHERE tickersymbol = 'MT';
+WHERE tickersymbol = 'ZION';
 
 SELECT DISTINCT TickerID FROM commodities;
 
+SELECT TickerSymbol
+FROM tickers
+WHERE type LIKE '%stock%'
+AND NOT EXISTS (
+    SELECT 1
+    FROM dailyOHLCVs
+    WHERE dailyOHLCVs.TickerID = tickers.TickerID
+);
+
+UPDATE tickers
+SET lastupdated = current_date - interval '4 months'
+WHERE (type LIKE '%stock%' or type LIKE '%ETF%')
+AND NOT EXISTS (
+    SELECT 1
+    FROM dailyOHLCVs
+    WHERE dailyOHLCVs.TickerID = tickers.TickerID
+);
+
 sudo docker exec -it pgsql-dev bash
+
+- .env file in /e like this:{"X-RapidAPI-Key":"apikey"}
+
 
 ### Implementation
 - Technologies:
@@ -71,6 +115,9 @@ sudo docker exec -it pgsql-dev bash
     - Docker-compose
     - Postgresql
 
-
-
-    
+- will containerize later
+    - DB (backup layer)
+        - sync DBs (a write writes to 2, others query DBs to see if they have more recent updates than themselves)
+    - check DB queue and update tickers (or in DB container?)
+    - not containerized:
+        - CLI to update tickers/jobs

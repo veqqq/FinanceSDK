@@ -19,9 +19,11 @@ CREATE TABLE tickers (
     TickerID serial primary key,
     TickerSymbol varchar unique,
     type varchar, -- stock, etf, macro, commodity? Manual labling?
+    -- "bureaucracy fields"
     lastupdated date,
-    importance varchar -- how often to update
+    importance varchar, -- how often to update
     -- q = quarterly, m = monthly
+    coverage varchar -- what to include
 );
 
 -- jobqueue (human can add to this, updater service checks tickers' last updated etc. and overview's industry)

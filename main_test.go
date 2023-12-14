@@ -68,7 +68,7 @@ func TestJsonToPostgres(t *testing.T) {
 		{"IBM",
 			"https://www.alphavantage.co/query?function=OVERVIEW&symbol=IBM&apikey=demo",
 			"APIs.StockOverview",
-			"nope", // #todo fix this my god
+			"nope", // #todo fix this my god, make DB fake...
 		}}
 
 	for _, tc := range testCases {

@@ -54,7 +54,6 @@ INSERT INTO tickers (TickerSymbol, type, lastupdated, importance) VALUES
 ('UGA', 'commodity ETF', current_date - interval '4 months', 'm'), -- Gasoline
 ('NLR', 'commodity ETF', current_date - interval '4 months', 'm'), -- nuclear
 ('PXE', 'commodity ETF', current_date - interval '4 months', 'm'), -- O&G exploration
-('PXG', 'commodity ETF', current_date - interval '4 months', 'm'), -- O&G services
 ('FCG', 'commodity ETF', current_date - interval '4 months', 'm'), -- nat gas producers
 ('URA', 'commodity ETF', current_date - interval '4 months', 'm'), -- Uranium
 

@@ -63,7 +63,7 @@ mainchoice:
 				TickerSymbol: ticker,
 				Importance:   importance,
 			}
-
+			// todo #add "type"
 			newtickers = append(newtickers, newticker)
 
 			willUserContinue := GetSanatizedInput("Do you want to add more tickers? y or n\n", "y", "n")
@@ -93,7 +93,7 @@ mainchoice:
 			fmt.Println(url + " " + structType)
 
 			JsonToPostgres(db, ticker.TickerSymbol, resp.Body)
-			time.Sleep(3 * time.Second) // to not overload the api
+			time.Sleep(6 * time.Second) // timer to not overload the api
 		}
 	case 3:
 		// v0.1 functionality
@@ -194,12 +194,11 @@ func QueryBuilder(ticker string) (url string) {
 		url = baseUrl + "FX_DAILY" + "&outputsize=full" + "&from_symbol=" + from + "&to_symbol=" + to
 		structType = "APIs.ForexPrices"
 		return
-	// TOP_GAINERS_LOSERS and most active...
-	// fix pls ? #todo ???
-	case "TGLAT", "TGLATS", "GAINERS", "LOSERS", "TOPGAINERSLOSERS":
-		url = baseUrl + "TOP_GAINERS_LOSERS"
-		structType = "APIs.TGLATs"
-		return
+	// // TOP_GAINERS_LOSERS and most active... // removed
+	// case "TGLAT", "TGLATS", "GAINERS", "LOSERS", "TOPGAINERSLOSERS":
+	// 	url = baseUrl + "TOP_GAINERS_LOSERS"
+	// 	structType = "APIs.TGLATs"
+	// 	return
 	case "OVERVIEW":
 		tickerNext := strings.Fields(ticker)[1]
 		url = baseUrl + "OVERVIEW" + "&symbol=" + tickerNext
