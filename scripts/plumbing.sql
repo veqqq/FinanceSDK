@@ -3,7 +3,7 @@
 CREATE TABLE jobqueue (
     TickerID int REFERENCES tickers(TickerID),
     TickerSymbol varchar unique REFERENCES tickers(TickerSymbol),
-    Depth varchar -- n = only ohcvls, a = accounting docs and ohcvls, i = intraday ohcvls
+    coverage varchar -- n = only ohcvls, a = accounting docs and ohcvls, i = intraday ohcvls
 );
 
 CREATE TABLE ApiCalls (

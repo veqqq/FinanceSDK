@@ -21,7 +21,7 @@ CREATE TABLE tickers (
     type varchar, -- stock, etf, macro, commodity? Manual labling?
     -- "bureaucracy fields"
     lastupdated date,
-    importance varchar, -- how often to update
+    updatefrequency varchar, -- how often to update
     -- q = quarterly, m = monthly
     coverage varchar -- what to include
 );
@@ -191,6 +191,7 @@ CREATE TABLE balance_sheets (
 CREATE TABLE cash_flow_statements (
     TickerID int REFERENCES tickers(TickerID),
     TickerSymbol varchar REFERENCES tickers(TickerSymbol),
+    datasource int REFERENCES datasources(SourceID),
     fiscal_date_ending date unique,
     reported_currency varchar,
     operating_cashflow decimal,
@@ -223,6 +224,19 @@ CREATE TABLE cash_flow_statements (
     net_income decimal
 );
 
+CREATE TABLE earnings (
+    TickerID int REFERENCES tickers(TickerID),
+    TickerSymbol varchar REFERENCES tickers(TickerSymbol),
+    datasource int REFERENCES datasources(SourceID),
+
+    fiscal_date_ending date,
+    reported_date date;
+    reportedEPS decimal,
+    estimatedEPS decimal,
+    surprise decimal,
+    surprise_percentage decimal
+);
+
 
 -- Commodities and macro, the types are hard here
 -- e.g.: sugar: value":"24.9216494133885 <- 15!
@@ -234,9 +248,6 @@ CREATE TABLE commodities ( -- commodities and macro indicators
     datasource int REFERENCES datasources(SourceID),
     primary key (TickerID, value, date, datasource) -- makes sure each date tickerID combo is unique
 );
-
--- #todo
--- make 2nd commodity table for ones like oil or bond rates with low precision requirements
 
 CREATE TABLE forex (
     TickerID int REFERENCES tickers(TickerID), -- Format: FOREX JPY EUR - start with FOREX then 2 tickers

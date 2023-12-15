@@ -40,9 +40,9 @@ func AddTickersToDB(db *sql.DB, jobs []Job) {
 	e.Check(err)
 
 	for _, job := range jobs {
-		_, err = db.Exec(`INSERT INTO tickers (TickerSymbol, Importance, lastupdated)
+		_, err = db.Exec(`INSERT INTO tickers (TickerSymbol, updatefrequency, lastupdated)
 	VALUES ($1, $2, current_date - interval '2 months')`,
-			job.TickerSymbol, job.Importance)
+			job.TickerSymbol, job.updatefrequency)
 		if err != nil {
 			if strings.Contains(err.Error(), "duplicate") {
 				fmt.Println("Duplicate value not saved")
@@ -55,14 +55,13 @@ func AddTickersToDB(db *sql.DB, jobs []Job) {
 
 // jobqueue funcs:
 type Job struct {
-	TickerSymbol string
-	TickerID     int
-	Importance   string
+	TickerSymbol    string
+	TickerID        int
+	updatefrequency string
 }
 
-// #todo I can move to TickerID into this to send the job to others?
 func GetJobQueue(db *sql.DB) ([]Job, error) {
-	rows, err := db.Query("SELECT TickerID, TickerSymbol FROM jobqueue") // #todo add depth to all of this
+	rows, err := db.Query("SELECT TickerID, TickerSymbol FROM jobqueue") // #todo add coverage to all of this
 	e.Check(err)
 	defer rows.Close()
 	var jobQueue []Job
@@ -81,8 +80,8 @@ func GetJobQueue(db *sql.DB) ([]Job, error) {
 
 func UpdateJobQueue(db *sql.DB) {
 	// check if last updated is null
-	// check if last updated is further back than the importance period
-	rows, err := db.Query("SELECT TickerID, TickerSymbol, importance, lastupdated FROM tickers")
+	// check if last updated is further back than the updatefrequency period
+	rows, err := db.Query("SELECT TickerID, TickerSymbol, updatefrequency, lastupdated FROM tickers")
 	e.Check(err)
 	defer rows.Close()
 
@@ -92,12 +91,12 @@ func UpdateJobQueue(db *sql.DB) {
 		var job Job
 		var lastUpdated time.Time
 
-		if err := rows.Scan(&job.TickerID, &job.TickerSymbol, &job.Importance, &lastUpdated); err != nil {
+		if err := rows.Scan(&job.TickerID, &job.TickerSymbol, &job.updatefrequency, &lastUpdated); err != nil {
 			fmt.Println("Error scanning row:", err)
 			continue
 		}
 
-		switch job.Importance {
+		switch job.updatefrequency {
 		case "m": // more than a month
 			if time.Since(lastUpdated).Hours() > 24*30 {
 				updatequeue = append(updatequeue, job)

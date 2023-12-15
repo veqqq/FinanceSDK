@@ -1,4 +1,4 @@
-insert into tickers (tickersymbol, lastupdated, importance, type) values
+insert into tickers (tickersymbol, lastupdated, updatefrequency, type) values
     -- country etfs
     ('EWZ', current_date - interval '4 months', 'm', 'Country ETF'), -- Brazil
     ('EWC', current_date - interval '4 months', 'q', 'Country ETF'), -- Cannada
@@ -50,7 +50,7 @@ insert into datasources (sourceid, sourcename, sourceurl) values
 
 
 -- stocks I like
-insert into tickers (tickersymbol, lastupdated, importance) values
+insert into tickers (tickersymbol, lastupdated, updatefrequency) values
     -- energy
     ('LEU', 'commodity stock', current_date - interval '4 months', 'm'), -- nuclear stuff uranium
     -- banks
@@ -58,7 +58,7 @@ insert into tickers (tickersymbol, lastupdated, importance) values
     ('BDORY', 'financial stock', current_date - interval '4 months', 'm')
 ;
 
-insert into tickers (tickersymbol, type, lastupdated, importance) values
+insert into tickers (tickersymbol, type, lastupdated, updatefrequency) values
     -- steel
     ('CLF', 'commodity stock', current_date - interval '4 months', 'm'),
     ('MT', 'commodity stock', current_date - interval '4 months', 'm'),
@@ -90,7 +90,7 @@ insert into tickers (tickersymbol, type, lastupdated, importance) values
     ;
 
     -- energy oil
-    insert into tickers (tickersymbol, type, lastupdated, importance) values
+    insert into tickers (tickersymbol, type, lastupdated, updatefrequency) values
 ('PAGP', 'Buffet oil commodity stock', current_date - interval '4 months', 'm'),
 ('PBF', 'oil commodity stock', current_date - interval '4 months', 'm'),
 ('PBFX', 'oil commodity stock', current_date - interval '4 months', 'm'),
@@ -179,7 +179,7 @@ on conflict (tickersymbol) do nothing
 ;
 
 -- Buffet liked these at some point or held them
-    insert into tickers (tickersymbol, type, lastupdated, importance) values
+    insert into tickers (tickersymbol, type, lastupdated, updatefrequency) values
 ('NU', 'Buffet need-label stock', current_date - interval '4 months', 'm'),
 ('AMZN', 'Buffet need-label stock', current_date - interval '4 months', 'm'),
 ('STNE', 'Buffet need-label stock', current_date - interval '4 months', 'm'),
@@ -218,7 +218,7 @@ on conflict (tickersymbol) do nothing
 ;
 
 -- financials banks
-    insert into tickers (tickersymbol, type, lastupdated, importance) values
+    insert into tickers (tickersymbol, type, lastupdated, updatefrequency) values
 ('C', 'Buffet financial stock', current_date - interval '4 months', 'm'),
 ('ABCB', 'financial stock', current_date - interval '4 months', 'm'),
 ('ACGL', 'financial stock', current_date - interval '4 months', 'm'),
@@ -322,7 +322,7 @@ on conflict (tickersymbol) do nothing
 on conflict (tickersymbol) do nothing
 ;
 
-    insert into tickers (tickersymbol, type, lastupdated, importance) values
+    insert into tickers (tickersymbol, type, lastupdated, updatefrequency) values
 ('TLT', 'bond macro ETF', current_date - interval '4 months', 'm'),
 ('BRK-B', 'Buffet stock', current_date - interval '4 months', 'm'),
 -- Japan

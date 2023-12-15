@@ -1,4 +1,4 @@
-INSERT INTO tickers (TickerSymbol, type, lastupdated, importance) VALUES
+INSERT INTO tickers (TickerSymbol, type, lastupdated, updatefrequency) VALUES
 -- comodities
 ('WTI', 'commodity', current_date - interval '4 months', 'm'),
 ('BRENT', 'commodity', current_date - interval '4 months', 'm'),
@@ -30,7 +30,7 @@ INSERT INTO tickers (TickerSymbol, type, lastupdated, importance) VALUES
 ;
 
 -- these ETFs track commodities
-INSERT INTO tickers (TickerSymbol, type, lastupdated, importance) VALUES
+INSERT INTO tickers (TickerSymbol, type, lastupdated, updatefrequency) VALUES
 ('PALL', 'commodity ETF', current_date - interval '4 months', 'm'), -- Palladium
 ('GLD', 'commodity ETF', current_date - interval '4 months', 'm'),
 ('SLV', 'commodity ETF', current_date - interval '4 months', 'm'), -- silver
@@ -60,7 +60,7 @@ INSERT INTO tickers (TickerSymbol, type, lastupdated, importance) VALUES
 ('TAN', 'commodity ETF', current_date - interval '4 months', 'm'), -- solar
 ('FAN', 'commodity ETF', current_date - interval '4 months', 'm'), -- wind
 ('PBD', 'commodity ETF', current_date - interval '4 months', 'm'), -- clean energy
-('PIO', 'commodity ETF', current_date - interval '4 months', 'm'), -- global water #todo companies or?
+('PIO', 'commodity ETF', current_date - interval '4 months', 'm'), -- global water (purification conversation) companies
 
 ('PPA', 'sector ETF', current_date - interval '4 months', 'm'), -- aerospace defense
 ('EVX', 'sector ETF', current_date - interval '4 months', 'm'), -- enviromental services
@@ -88,7 +88,7 @@ INSERT INTO tickers (TickerSymbol, type, lastupdated, importance) VALUES
 ('CARZ', 'sector ETF', current_date - interval '4 months', 'm'), -- auto makers
 
 ('GDX', 'sector commodity ETF', current_date - interval '4 months', 'm'), -- gold miners
-('HAP', 'sector commodity ETF', current_date - interval '4 months', 'm'), -- hard asset producers #todo what's a hard asset?
+('HAP', 'sector commodity ETF', current_date - interval '4 months', 'm'), -- agro energy metals
 ('GDXJ', 'sector commodity ETF', current_date - interval '4 months', 'm'), -- junior gold miner
 ('XME', 'sector commodity ETF', current_date - interval '4 months', 'm'), -- metals and mining
 ('SLX', 'sector commodity ETF', current_date - interval '4 months', 'm'), -- steel producers global
@@ -127,11 +127,11 @@ INSERT INTO tickers (TickerSymbol, type, lastupdated, importance) VALUES
 ('DBB', 'commodity ETF', current_date - interval '4 months', 'm'), -- industrial metals
 ('BCI', 'commodity ETF', current_date - interval '4 months', 'm'), -- Bloomberg divers. commod.
 ('DBA', 'commodity ETF', current_date - interval '4 months', 'm'), -- agro
-('DBE', 'commodity ETF', current_date - interval '4 months', 'm'), -- energy
+('DBE', 'commodity ETF', current_date - interval '4 months', 'm'), -- energy (holds futures in brent, coal, gas etc.)
 ('GSG', 'commodity ETF', current_date - interval '4 months', 'm') -- Goldman divers. commod.
 ;
 -- these ETFs track themes in emerging markets
-INSERT INTO tickers (TickerSymbol, type, lastupdated, importance) VALUES
+INSERT INTO tickers (TickerSymbol, type, lastupdated, updatefrequency) VALUES
 ('EMQQ', 'emerging market ETF', current_date - interval '4 months', 'q'), -- EM tech
 ('ECON', 'emerging market ETF', current_date - interval '4 months', 'q'), -- EM consumer
 ('EMIF', 'emerging market ETF', current_date - interval '4 months', 'q'), -- EM infrastructure
@@ -166,12 +166,12 @@ INSERT INTO tickers (TickerSymbol, type, lastupdated, importance) VALUES
 ;
 
 -- ETFs tracking sectors
-INSERT INTO tickers (TickerSymbol, type, lastupdated, importance) VALUES
+INSERT INTO tickers (TickerSymbol, type, lastupdated, updatefrequency) VALUES
 ('XLB', 'sector commodity ETF', current_date - interval '4 months', 'q'), -- Basic Materials
 ('XLC', 'sector ETF', current_date - interval '4 months', 'q'), -- communication
 ('XLY', 'sector ETF', current_date - interval '4 months', 'q'), -- consummer discretionary
 ('XLP', 'sector ETF', current_date - interval '4 months', 'q'), -- consumer staples
-('XLE', 'commodity sector ETF', current_date - interval '4 months', 'q'), -- energy #todo the dif vs dbe?
+('XLE', 'commodity sector ETF', current_date - interval '4 months', 'q'), -- energy companies
 ('XLF', 'financial sector ETF', current_date - interval '4 months', 'q'), --  financial 
 ('XLV', 'sector ETF', current_date - interval '4 months', 'q'), -- healthcare
 ('XLI', 'sector ETF', current_date - interval '4 months', 'q'), -- industrial
@@ -200,8 +200,8 @@ INSERT INTO tickers (TickerSymbol, type, lastupdated, importance) VALUES
 ('JXI', 'sector ETF', current_date - interval '4 months', 'q') -- utilities
 ;
 
--- ETFs tracking global things #todo think of better name and types, low discoverability
-INSERT INTO tickers (TickerSymbol, type, lastupdated, importance) VALUES
+-- ETFs tracking global things - think of better name and types, low discoverability
+INSERT INTO tickers (TickerSymbol, type, lastupdated, updatefrequency) VALUES
 -- quality
 ('IQLT', 'ETF', current_date - interval '4 months', 'm'), -- developped markets quality
 ('GEM', 'emerging market ETF', current_date - interval '4 months', 'm'), -- EM quality
@@ -212,7 +212,7 @@ INSERT INTO tickers (TickerSymbol, type, lastupdated, importance) VALUES
 ;
 
 -- still more etfs
-INSERT INTO tickers (TickerSymbol, type, lastupdated, importance) VALUES
+INSERT INTO tickers (TickerSymbol, type, lastupdated, updatefrequency) VALUES
 -- strategies
 ('PKW', 'strategy ETF', current_date - interval '4 months', 'q'), -- Buybacks
 ('PBP', 'strategy ETF', current_date - interval '4 months', 'q'), -- Buy-Write
@@ -260,7 +260,7 @@ INSERT INTO tickers (TickerSymbol, type, lastupdated, importance) VALUES
 ;
 
 -- bond ETFs
-INSERT INTO tickers (TickerSymbol, type, lastupdated, importance) VALUES
+INSERT INTO tickers (TickerSymbol, type, lastupdated, updatefrequency) VALUES
 ('US1M', 'bond ETF', current_date - interval '4 months', 'q'), -- 1 Month Treasury
 ('US2M', 'bond ETF', current_date - interval '4 months', 'q'), -- 2 Month Treasury
 ('US3M', 'bond ETF', current_date - interval '4 months', 'q'), -- 3 Month Treasury

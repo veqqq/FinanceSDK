@@ -52,11 +52,11 @@ mainchoice:
 			// n = only ohcvls, a = accounting docs and ohcvls, i = intraday ohcvls
 			msg := "\nHow often is this needed?\n" +
 				"q. Quarterly\nm. monthly\n"
-			importance := GetSanatizedInput(msg, "m", "q")
+			updatefrequency := GetSanatizedInput(msg, "m", "q")
 
 			newticker := Job{
-				TickerSymbol: ticker,
-				Importance:   importance,
+				TickerSymbol:    ticker,
+				updatefrequency: updatefrequency,
 			}
 			// todo #add "type"
 			newtickers = append(newtickers, newticker)
@@ -196,7 +196,7 @@ func QueryBuilder(ticker string) (result TypeContainer) {
 	switch tickerFirst {
 	// News sentiment - complicated beast - figure out later
 	// FX_DAILY
-	case "EXCHANGE", "CURRENCY", "RATE", "FX_DAILY", "FOREX": // #todo need to implement ForexPrices uploader...
+	case "EXCHANGE", "CURRENCY", "RATE", "FX_DAILY", "FOREX":
 		from := strings.Fields(ticker)[1]
 		to := strings.Fields(ticker)[2]
 		result.url = baseUrl + "FX_DAILY" + "&outputsize=full" + "&from_symbol=" + from + "&to_symbol=" + to
@@ -228,11 +228,11 @@ func QueryBuilder(ticker string) (result TypeContainer) {
 		result.url = baseUrl + "CASH_FLOW" + "&symbol=" + tickerNext
 		result.giventype = APIs.CashFlowStatements{}
 		return
-	// case "EARNINGS": #did not put earnings data in sql, so no uploader implemented
-	// 	tickerNext := strings.Fields(ticker)[1]
-	// 	result.url = baseUrl + "EARNINGS" + "&symbol=" + tickerNext
-	// 	result.giventype = APIs.EarningsData{}
-	// 	return
+	case "EARNINGS":
+		tickerNext := strings.Fields(ticker)[1]
+		result.url = baseUrl + "EARNINGS" + "&symbol=" + tickerNext
+		result.giventype = APIs.EarningsData{}
+		return
 	// commodities and macro indicators use the same structs, but are funcs instead of ticker
 	// WTI, BRENT, NATURAL_GAS, COPPER, ALUMINUM, WHEAT, CORN, COTTON, SUGAR, COFFEE, ALL_COMMODITIES
 	case "WTI":
@@ -345,7 +345,7 @@ func QueryBuilder(ticker string) (result TypeContainer) {
 			fmt.Println("Error parsing date:", err)
 			return
 		}
-		refDate, _ := time.Parse("2006-01", "2000-01") // #todo i suspect this will add itself as a new ticker like "CLF month"...
+		refDate, _ := time.Parse("2006-01", "2000-01")
 		if date.Before(refDate) {
 			fmt.Println("Error: Date is before 2000-01")
 		}

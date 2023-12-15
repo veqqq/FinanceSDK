@@ -119,6 +119,7 @@ type BalanceSheets struct {
 	FinancialStatements
 }
 
+
 type BalanceSheet struct {
 	FiscalDateEnding                       string     `json:"fiscalDateEnding"`
 	ReportedCurrency                       string     `json:"reportedCurrency"`
@@ -344,7 +345,6 @@ type ForexMetaData struct {
 	ToSymbol    string `json:"3. To Symbol"`   // "3. To Symbol": "USD",
 	//	OutputSize    string `json:"4. Output Size"`
 	// LastRefreshed string `json:"5. Last Refreshed"`
-	// TimeZone string `json:"6. Time Zone"` #todo ignoring this can be dangerous when more vendors are used
 }
 
 type ForexPrice struct {
@@ -374,7 +374,6 @@ type TGLAT struct {
 }
 
 // News sentiment - complicated beast
-// #todo - what to even do with this?
 
 type SentimentData struct {
 	Items                    string     `json:"items"`

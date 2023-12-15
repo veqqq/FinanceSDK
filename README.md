@@ -16,18 +16,20 @@
 
 
 ### To Do:
-- check #todos in the code
-
-- track total API calls each day
-
-- manage secrets better
-- add testing
-
-- go CLI get basic info from db? (how many rows etc.)
-- change "importance" to "frequency"
 - add something like "coverage" to determine if you should get dailies, intraday, financial docs...
     - makes confirming something was successfully updated difficult, must check many things. How to deal with failure midway?
     - intraday should only be gotten through this, entering e.g. "CLF 2021-04" in CLI will make a new ticker wih that date...
+
+intraday x 12 x years
+overview
+balance_sheets
+cashflow
+income
+
+- check #todos in the code
+- manage secrets better
+- add testing
+- go CLI get basic info from db? (how many rows etc.)
 - deploy to oracle, turso
     - for oracle, make updaterdaemon which does case 2 of userinput options (updating only)
 - split commodities in 2, some require more left hand precision, others right hand. Can reduce data by a fair bit
@@ -35,14 +37,12 @@
         - vol in daily 853446200
         - val in commodities 158461.000000000000
             - -36.980000000000 lol i remember that day WTI
-
 - decouple from alphavantage api
     - add more apis
     - test alignment between different sources
 - optimize bulkinsert method for postgres https://stackoverflow.com/questions/12206600/how-to-speed-up-insertion-performance-in-postgresql
     - mostly for fun, would overload API here
     - also not relevant for [CompanyModels](https://github.com/veqqq/CompanyModels) which can't retrieve and insert many more valuations than ticks...
-
 - bash install script
     - build go cli
     - docker-compose build and up -d (how to deal with different environments?)

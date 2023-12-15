@@ -1,4 +1,4 @@
-insert into tickers (tickersymbol, lastupdated, importance, type) values
+insert into tickers (tickersymbol, lastupdated, updatefrequency, type) values
     -- these represent the majority of volume
     ('FOREX EUR JPY', current_date - interval '4 months', 'm', 'Forex'),
     ('FOREX USD GBP', current_date - interval '4 months', 'm', 'Forex'), -- pound dollar
