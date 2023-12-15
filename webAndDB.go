@@ -87,7 +87,6 @@ func UpdateJobQueue(db *sql.DB) {
 	defer rows.Close()
 
 	var updatequeue []Job
-	fmt.Print("Added to queue: ")
 
 	for rows.Next() {
 		var job Job
@@ -99,23 +98,19 @@ func UpdateJobQueue(db *sql.DB) {
 		}
 
 		switch job.Importance {
-		case "m":
-			if time.Since(lastUpdated).Hours() > 24*30 { // more than a month
-				// Add logic for updating job queue
-				fmt.Printf("%s, ", job.TickerSymbol)
-				updatequeue = append(updatequeue, job) // Add job to the slice
+		case "m": // more than a month
+			if time.Since(lastUpdated).Hours() > 24*30 {
+				updatequeue = append(updatequeue, job)
 			}
-		case "q":
-			if time.Since(lastUpdated).Hours() > 24*30*3 { // more than a quarter
-				// Add logic for updating job queue
-				fmt.Printf("%s, ", job.TickerSymbol)
-				updatequeue = append(updatequeue, job) // Add job to the slice
+		case "q": // more than 3 months
+			if time.Since(lastUpdated).Hours() > 24*30*3 {
+				updatequeue = append(updatequeue, job)
 			}
 		}
 	}
-	fmt.Print("\n\n")
 
 	var failedlist string
+	var added string
 	for _, job := range updatequeue {
 		_, err = db.Exec(`INSERT INTO jobqueue (TickerID, TickerSymbol)
 	VALUES ($1, $2)`,
@@ -127,6 +122,15 @@ func UpdateJobQueue(db *sql.DB) {
 				panic(err)
 			}
 		}
+		added += job.TickerSymbol + " "
 	}
-	fmt.Print("These are already on queue: " + failedlist + "\n\n")
+	if failedlist != "" {
+		fmt.Print("These are already on queue: " + failedlist + "\n\n")
+	}
+	if added != "" {
+		fmt.Print("Added to queue: " + added + "\n")
+	}
+	if added == "" && failedlist == "" {
+		fmt.Print("The job queue is empty. Everything is up to date.")
+	}
 }

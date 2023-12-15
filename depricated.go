@@ -15,6 +15,10 @@ import (
 // this was v0.1 to test the api. Still exposed in cmdln because why not?
 // I just use it to check tickers. E.g. will USO give me data?
 
+// the global "structType" drives JsonToPostgres() and QueryBuilder() which are
+var structType string // global, is specified in query builder,
+// then used to marshal json, manage sql inserts...
+
 // unmarshal into correct structs, because of the different nesting forms, can't avoid it
 // to marshal into better format, use huge switch statement, which checks the global var structType
 // is this (9/func) less loc than the requisite interface satisfying?

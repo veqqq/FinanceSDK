@@ -72,8 +72,6 @@ mainchoice:
 		UpdateJobQueue(db)
 		tickers, err := GetJobQueue(db)
 		e.Check(err)
-		fmt.Print(tickers)
-		fmt.Print("\n")
 
 		for _, ticker := range tickers {
 			thing := QueryBuilder(ticker.TickerSymbol) // thing is Container w Uploader
@@ -108,7 +106,7 @@ mainchoice:
 		resp, err := http.DefaultClient.Do(req)
 		e.Check(err)
 		defer resp.Body.Close()
-		finalData := DepricatedReformatJson(resp.Body) // relies on global which query builder no longer sets
+		finalData := DepricatedReformatJson(resp.Body)
 		WriteToFile(ticker, finalData)
 	case 4:
 		fmt.Println("Exiting program.")
@@ -150,7 +148,7 @@ func GetTickerFromUser() string {
 		"OVERVIEW", "RETAIL", "INFLATION", "CPI", "FEDFUNDSRATE", "FUNDS", "EFFECTIVEFEDERALFUNDSRATE", "EFFR",
 		"GDPPC", "GDPPERCAP", "GDP", "EARNINGS", "CASHFLOW", "BALANCE_SHEET", "BALANCE", "BALANCESHEET",
 		"INCOME", "INCOMESTATEMENT", "STATEMENT", "INCOME_STATEMENT", "RETAILSALES",
-		"BOND", "YIELD", "TREASURY", "TREASURY_YIELD", "EXCHANGE", "CURRENCY", "RATE",
+		"BOND", "YIELD", "TREASURY", "TREASURY_YIELD", "EXCHANGE", "CURRENCY", "RATE", "FX_DAILY", "FOREX",
 	}
 	for _, word := range words {
 		if strings.Contains(userInput, word) {
@@ -175,7 +173,7 @@ type Uploader interface {
 	Upload(db *sql.DB, ticker string, ID int, body []byte)
 }
 
-type Container struct {
+type TypeContainer struct {
 	url       string
 	giventype Uploader
 }
@@ -186,7 +184,7 @@ type Container struct {
 // https://alpha-vantage.p.rapidapi.com/query?function=TIME_SERIES_DAILY&symbol=EWZ - the apikey goes in a header
 // ticker's a string with spaces, check the first word in the switch statement (e.g. overview ewz -> OVERVIEW EWZ)
 // this frist word picks the func/querry type
-func QueryBuilder(ticker string) (result Container) {
+func QueryBuilder(ticker string) (result TypeContainer) {
 	// the actual ticker comes after
 	tickerFirst := strings.Fields(ticker)[0]
 	var dateRegexIsTrue string
@@ -197,12 +195,12 @@ func QueryBuilder(ticker string) (result Container) {
 	switch tickerFirst {
 	// News sentiment - complicated beast - figure out later
 	// FX_DAILY
-	// case "EXCHANGE", "CURRENCY", "RATE": #todo need to implement ForexPrices uploader...
-	// 	from := strings.Fields(ticker)[1]
-	// 	to := strings.Fields(ticker)[2]
-	// 	result.url = baseUrl + "FX_DAILY" + "&outputsize=full" + "&from_symbol=" + from + "&to_symbol=" + to
-	// 	result.giventype = APIs.ForexPrices{}
-	// 	return
+	case "EXCHANGE", "CURRENCY", "RATE", "FX_DAILY", "FOREX": // #todo need to implement ForexPrices uploader...
+		from := strings.Fields(ticker)[1]
+		to := strings.Fields(ticker)[2]
+		result.url = baseUrl + "FX_DAILY" + "&outputsize=full" + "&from_symbol=" + from + "&to_symbol=" + to
+		result.giventype = APIs.ForexPrices{}
+		return
 	// // TOP_GAINERS_LOSERS and most active... // removed
 	// case "TGLAT", "TGLATS", "GAINERS", "LOSERS", "TOPGAINERSLOSERS":
 	// 	url = baseUrl + "TOP_GAINERS_LOSERS"

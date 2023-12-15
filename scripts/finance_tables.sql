@@ -74,7 +74,7 @@ CREATE TABLE intradayOHLCVs (
 CREATE TABLE stock_overviews (
     TickerID int REFERENCES tickers(TickerID),
     TickerSymbol varchar REFERENCES tickers(TickerSymbol),
-    symbol varchar REFERENCES tickers(TickerSymbol),
+    datasource int REFERENCES datasources(SourceID),
     asset_type varchar,
     name varchar,
     cik varchar,
@@ -122,6 +122,7 @@ CREATE TABLE stock_overviews (
 CREATE TABLE income_statements (
     TickerID int REFERENCES tickers(TickerID),
     TickerSymbol varchar REFERENCES tickers(TickerSymbol),
+    datasource int REFERENCES datasources(SourceID),
     fiscal_date_ending date unique,
     reported_currency varchar,
     gross_profit decimal,
@@ -153,6 +154,7 @@ CREATE TABLE income_statements (
 CREATE TABLE balance_sheets (
     TickerID int REFERENCES tickers(TickerID),
     TickerSymbol varchar REFERENCES tickers(TickerSymbol),
+    datasource int REFERENCES datasources(SourceID),
     fiscal_date_ending date unique,
     reported_currency varchar,
     total_assets decimal,
@@ -244,8 +246,8 @@ CREATE TABLE commodities ( -- commodities and macro indicators
 -- make 2nd commodity table for ones like oil or bond rates with low precision requirements
 
 CREATE TABLE forex (
-    fromCurrency varchar,
-    toCurrency varchar,
+    TickerID int REFERENCES tickers(TickerID), -- Format: FOREX JPY EUR - start with FOREX then 2 tickers
+    TickerSymbol varchar REFERENCES tickers(TickerSymbol),
     date date,
     open decimal(10,7), -- unsure, yen is the main issue here
     high decimal(10,7), -- e.g. close":"0.00643

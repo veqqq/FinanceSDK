@@ -16,41 +16,14 @@
 
 
 ### To Do:
-- ChekDBInsert() should os.Exit() if an insert failed
-    - but e.g. CAJ (unsupported ticker) went through, updated etc.
-UPDATE tickers
-SET lastupdated = current_date - interval '4 months'
-WHERE (type LIKE '%stock%' or type LIKE '%ETF%')
-AND NOT EXISTS (
-    SELECT 1
-    FROM dailyOHLCVs
-    WHERE dailyOHLCVs.TickerID = tickers.TickerID
-);
     
-- make an interface of all types like
-    APIs.DailyOHLCV
-    - can probably restructure those huge switches
-    - should implement "is nil" for a e.Check test
-
---------------
-		// refactor to this:		https://go.dev/play/p/E0QOqFRzuHD
-		// Querybuilder -> struct {url string, umbrealltype Uploader}
-		// unmarshal into *umbrealla type, which will be the specific needed type!
-		// uploading(struct.umbrellatype)
-
-----------
-
-
 - check #todos in the code
 
 - manage secrets better
-- bash install script
-    - build go cli
-    - docker-compose build and up -d (how to deal with different environments?)
 - add testing
-- change logic of TickerID (when it's fetched etc.)
 
 - go CLI get basic info from db? (how many rows etc.)
+- change "importance" to "frequency"
 - add something like "coverage" to determine if you should get dailies, intraday, financial docs...
     - makes confirming something was successfully updated difficult, must check many things. How to deal with failure midway?
     - intraday should only be gotten through this, entering e.g. "CLF 2021-04" in CLI will make a new ticker wih that date...
@@ -78,12 +51,16 @@ AND NOT EXISTS (
     - but are they different?
     - research how BRENT and BNO, WHEAT and EAT, SUGAR and CANE, ALUMINIUM and JJUFF etc. differ
 - how is e.g. (Sector) xle different from (commodity etf?) dbe
+- bash install script
+    - build go cli
+    - docker-compose build and up -d (how to deal with different environments?)
+    - my current usage:
+        - docker-compose up
+        - go run .
 
 ### Usage:
 - `sudo docker-compose build`
 - `sudo docker-compose up -d`
-
-- *go build*
 
 UPDATE tickers
 SET lastupdated = current_date - interval '2 months'

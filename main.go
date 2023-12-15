@@ -9,19 +9,16 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// for new readers
-// the global "structType" drives JsonToPostgres() and QueryBuilder() which are
-// the main workhorses here. WhatDoesUserWantToDo() is the CLI and invokes everything
+// for new readers queryBuilder() returns structs containing the type to unmarshal into
+// and upload from. WhatDoesUserWantToDo() is the CLI and invokes everything
 
 func main() {
-
 	for {
 		WhatDoesUserWantToDo() // in UI.go, houses the CLI and all invocations
 	}
 }
 
 // build the initial url, strongly coupled to alphavantage #todo
-
 var apiKey string
 
 // build a base url, fetching the apikey from .env file
@@ -54,9 +51,7 @@ func buildBaseURL() string {
 	return "https://alpha-vantage.p.rapidapi.com/query?" + "function="
 }
 
-var baseUrl string    // global
-var structType string // global, is specified in query builder,
-// then used to marshal json, manage sql inserts...
+var baseUrl string // global
 
 func init() {
 	baseUrl = buildBaseURL()

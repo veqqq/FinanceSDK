@@ -17,7 +17,7 @@ func (SO StockOverview) Upload(db *sql.DB, ticker string, tickerID int, body []b
 	CheckJSON(err, m)
 	// tickerID := GetTickerID(db, ticker) <- should be contained in its surrounding struct
 	result, err := db.Exec(`INSERT INTO stock_overviews (id,
-        symbol, asset_type, name, cik, exchange, currency, country, sector, industry,
+        TickerSymbol, datasource, asset_type, name, cik, exchange, currency, country, sector, industry,
         address, fiscal_year_end, latest_quarter, market_capitalization, ebitda, pe_ratio, peg_ratio,
         book_value, dividend_per_share, dividend_yield, eps, revenue_per_share_ttm, profit_margin,
         operating_margin_ttm, return_on_assets_ttm, return_on_equity_ttm, revenue_ttm, gross_profit_ttm,
@@ -27,8 +27,8 @@ func (SO StockOverview) Upload(db *sql.DB, ticker string, tickerID int, body []b
         day_moving_average_200, shares_outstanding, dividend_date, ex_dividend_date)
 		VALUES (2$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
         $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38,
-        $39, $40, $41, $42, $43, $44)`,
-		tickerID, ticker, m.AssetType, m.Name,
+        $39, $40, $41, $42, $43, $44, $45)`,
+		tickerID, ticker, 1, m.AssetType, m.Name,
 		m.CIK, m.Exchange, m.Currency, m.Country,
 		m.Sector, m.Industry, m.Address, m.FiscalYearEnd,
 		m.LatestQuarter, m.MarketCapitalization, m.EBITDA,
@@ -50,7 +50,7 @@ func (SO IncomeStatements) Upload(db *sql.DB, ticker string, tickerID int, body 
 	err := json.Unmarshal(body, &m)
 	CheckJSON(err, m)
 	for _, m := range m.QuarterlyReports {
-		result, err := db.Exec(`INSERT INTO income_statements (TickerID, TickerSymbol, fiscal_date_ending, reported_currency,
+		result, err := db.Exec(`INSERT INTO income_statements (TickerID, TickerSymbol, datasource, fiscal_date_ending, reported_currency,
 		gross_profit, total_revenue, cost_of_revenue, cost_of_goods_and_services_sold,
 		operating_income, selling_general_and_administrative, research_and_development,
 		operating_expenses, investment_income_net, net_interest_income, interest_income,
@@ -59,8 +59,8 @@ func (SO IncomeStatements) Upload(db *sql.DB, ticker string, tickerID int, body 
 		interest_and_debt_expense, net_income_from_continuing_operations,
 		comprehensive_income_net_of_tax, ebit, ebitda, net_income)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
-		$19, $20, $21, $22, $23, $24, $25, $26, $27, $28)`,
-			tickerID, ticker, m.FiscalDateEnding, m.ReportedCurrency, m.GrossProfit,
+		$19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)`,
+			tickerID, ticker, 1, m.FiscalDateEnding, m.ReportedCurrency, m.GrossProfit,
 			m.TotalRevenue, m.CostOfRevenue, m.CostofGoodsAndServicesSold,
 			m.OperatingIncome, m.SellingGeneralAndAdministrative, m.ResearchAndDevelopment,
 			m.OperatingExpenses, m.InvestmentIncomeNet, m.NetInterestIncome,
@@ -69,7 +69,7 @@ func (SO IncomeStatements) Upload(db *sql.DB, ticker string, tickerID int, body 
 			m.IncomeBeforeTax, m.IncomeTaxExpense, m.InterestAndDebtExpense,
 			m.NetIncomeFromContinuingOperations, m.ComprehensiveIncomeNetOfTax,
 			m.EBIT, m.EBITDA, m.NetIncome)
-		e.CheckDBInsert(err, result, ticker, "StockOverview", m)
+		e.CheckDBInsert(err, result, ticker, "IncomeStatements", m)
 	}
 }
 
@@ -77,9 +77,8 @@ func (SO BalanceSheets) Upload(db *sql.DB, ticker string, tickerID int, body []b
 	var m BalanceSheets
 	err := json.Unmarshal(body, &m)
 	CheckJSON(err, m)
-
 	for _, m := range m.QuarterlyReports {
-		result, err := db.Exec(`INSERT INTO balance_sheets (TickerID, TickerSymbol, fiscal_date_ending, reported_currency,
+		result, err := db.Exec(`INSERT INTO balance_sheets (TickerID, TickerSymbol, datsource, fiscal_date_ending, reported_currency,
 			total_assets, total_current_assets, cash_and_cash_equivalents_at_carrying_value,
 			cash_and_short_term_investments, inventory, current_net_receivables,
 			total_non_current_assets, property_plant_equipment,
@@ -94,8 +93,8 @@ func (SO BalanceSheets) Upload(db *sql.DB, ticker string, tickerID int, body []b
 			treasury_stock, retained_earnings, common_stock, common_stock_shares_outstanding)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
 			$19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35,
-			$36, $37, $38, $39, $40)`,
-			tickerID, ticker, m.FiscalDateEnding, m.ReportedCurrency,
+			$36, $37, $38, $39, $40, $41)`,
+			tickerID, ticker, 1, m.FiscalDateEnding, m.ReportedCurrency,
 			m.TotalAssets, m.TotalCurrentAssets, m.CashAndCashEquivalentsAtCarryingValue,
 			m.CashAndShortTermInvestments, m.Inventory, m.CurrentNetReceivables,
 			m.TotalNonCurrentAssets, m.PropertyPlantEquipment,
@@ -108,7 +107,7 @@ func (SO BalanceSheets) Upload(db *sql.DB, ticker string, tickerID int, body []b
 			m.CurrentLongTermDebt, m.LongTermDebtNoncurrent, m.ShortLongTermDebtTotal,
 			m.OtherCurrentLiabilities, m.OtherNonCurrentLiabilities, m.TotalShareholderEquity,
 			m.TreasuryStock, m.RetainedEarnings, m.CommonStock, m.CommonStockSharesOutstanding)
-		e.CheckDBInsert(err, result, ticker, "StockOverview", m)
+		e.CheckDBInsert(err, result, ticker, "BalanceSheets", m)
 	}
 }
 
@@ -117,7 +116,7 @@ func (SO CashFlowStatements) Upload(db *sql.DB, ticker string, tickerID int, bod
 	err := json.Unmarshal(body, &m)
 	CheckJSON(err, m)
 	for _, m := range m.QuarterlyReports {
-		result, err := db.Exec(`INSERT INTO cash_flow_statements (TickerID, TickerSymbol, fiscal_date_ending, reported_currency,
+		result, err := db.Exec(`INSERT INTO cash_flow_statements (TickerID, TickerSymbol, datasource, fiscal_date_ending, reported_currency,
 				operating_cashflow, payments_for_operating_activities,
 				proceeds_from_operating_activities, change_in_operating_liabilities,
 				change_in_operating_assets, depreciation_depletion_and_amortization,
@@ -135,8 +134,8 @@ func (SO CashFlowStatements) Upload(db *sql.DB, ticker string, tickerID int, bod
 				proceeds_from_sale_of_treasury_stock,
 				change_in_cash_and_cash_equivalents, change_in_exchange_rate, net_income)
 				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-				$18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)`,
-			tickerID, ticker, m.FiscalDateEnding,
+				$18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)`,
+			tickerID, ticker, 1, m.FiscalDateEnding,
 			m.ReportedCurrency, m.OperatingCashflow,
 			m.PaymentsForOperatingActivities,
 			m.ProceedsFromOperatingActivities,
@@ -159,13 +158,12 @@ func (SO CashFlowStatements) Upload(db *sql.DB, ticker string, tickerID int, bod
 			m.ProceedsFromSaleOfTreasuryStock,
 			m.ChangeInCashAndCashEquivalents,
 			m.ChangeInExchangeRate, m.NetIncome)
-		e.CheckDBInsert(err, result, ticker, "StockOverview", m)
+		e.CheckDBInsert(err, result, ticker, "CashFlowStatements", m)
 	}
 }
 
 // Commodities and Economic Indicators - use same structure
 // WTI, BRENT, nat gas, COPPER, ALUMINUM, WHEAT, CORN, COTTON, SUGAR, COFFEE
-
 func (SO CommodityPrices) Upload(db *sql.DB, ticker string, tickerID int, body []byte) {
 	var m CommodityPrices
 	err := json.Unmarshal(body, &m)
@@ -177,7 +175,7 @@ func (SO CommodityPrices) Upload(db *sql.DB, ticker string, tickerID int, body [
 			INSERT INTO commodities (TickerID, TickerSymbol, date, value, datasource)
 			VALUES ($1, $2, $3, $4, $5) ON CONFLICT (TickerID, value, date, datasource) DO NOTHING`,
 			tickerID, ticker, date, commodityData.Value, 1)
-		e.CheckDBInsert(err, result, ticker, "StockOverview", m)
+		e.CheckDBInsert(err, result, ticker, "CommodityPrices", m)
 	}
 }
 
@@ -189,7 +187,7 @@ func (SO IntradayOHLCVs) Upload(db *sql.DB, ticker string, tickerID int, body []
 		result, err := db.Exec(`INSERT INTO intradayohlcvs (TickerID, TickerSymbol, timestamp, open, high, low, close, volume, datasource)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);`, tickerID, ticker, time, m.Open, m.High,
 			m.Low, m.Close, m.Volume, 1) // 1= alphavantage
-		e.CheckDBInsert(err, result, ticker, "StockOverview", m)
+		e.CheckDBInsert(err, result, ticker, "IntradayOHLCVs", m)
 	}
 }
 
@@ -247,13 +245,6 @@ func (SO IntradayOHLCVs) Upload(db *sql.DB, ticker string, tickerID int, body []
 // 	return err
 // }
 
-// case "APIs.ForexPrices": #todo
-// 	var m APIs.ForexPrices
-// 	err := decoder.Decode(&m)
-// 	e.Check(err) #todo how to know which currency pair? Add it to from and to
-// _, err = db.Exec(`INSERT INTO forex (fromCurrency, toCurrency, open, high, low, close, datasource)
-// VALUES ($1, $2, $3, $4, $5, $6, $7)`, from?, to?, APIs.ForexPrice.Open, APIs.ForexPrice.High, APIs.ForexPrice.Low, APIs.ForexPrice.Close, "Alphavantage")
-
 func (SO DailyOHLCVs) Upload(db *sql.DB, ticker string, tickerID int, body []byte) {
 	var m DailyOHLCVs
 	err := json.Unmarshal(body, &m)
@@ -262,7 +253,17 @@ func (SO DailyOHLCVs) Upload(db *sql.DB, ticker string, tickerID int, body []byt
 		result, err := db.Exec(`INSERT INTO dailyOHLCVs (TickerID, TickerSymbol, date, open, high, low, close, volume, datasource)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);`, tickerID, ticker, date, m.Open, m.High,
 			m.Low, m.Close, m.Volume, 1) // 1= alphavantage
-		e.CheckDBInsert(err, result, ticker, "StockOverview", m)
+		e.CheckDBInsert(err, result, ticker, "DailyOHLCVs", m)
 	}
+}
 
+func (SO ForexPrices) Upload(db *sql.DB, ticker string, tickerID int, body []byte) {
+	var m ForexPrices
+	err := json.Unmarshal(body, &m)
+	CheckJSON(err, m)
+	for date, m := range m.TimeSeriesFX {
+		result, err := db.Exec(`INSERT INTO forex (TickerID, TickerSymbol, date, open, high, low, close, datasource)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`, tickerID, ticker, date, m.Open, m.High, m.Low, m.Close, 1)
+		e.CheckDBInsert(err, result, ticker, "ForexPrices", m)
+	}
 }

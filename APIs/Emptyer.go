@@ -49,3 +49,7 @@ func (d DailyOHLCVs) IsEmpty() bool {
 func (d IntradayOHLCVs) IsEmpty() bool {
 	return len(d.TimeSeries1min) == 0
 }
+
+func (d ForexPrices) IsEmpty() bool {
+	return len(d.TimeSeriesFX) == 0
+}
