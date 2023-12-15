@@ -26,13 +26,6 @@ CREATE TABLE tickers (
     coverage varchar -- what to include
 );
 
--- jobqueue (human can add to this, updater service checks tickers' last updated etc. and overview's industry)
-Create TABLE jobqueue (
-    TickerID int REFERENCES tickers(TickerID),
-    TickerSymbol varchar unique REFERENCES tickers(TickerSymbol),
-    Depth varchar -- n = only ohcvls, a = accounting docs and ohcvls, i = intraday ohcvls
-);
-
 CREATE TABLE datasources (
   SourceID serial primary key,
   SourceName varchar,

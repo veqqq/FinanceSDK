@@ -16,8 +16,9 @@
 
 
 ### To Do:
-    
 - check #todos in the code
+
+- track total API calls each day
 
 - manage secrets better
 - add testing
@@ -27,18 +28,14 @@
 - add something like "coverage" to determine if you should get dailies, intraday, financial docs...
     - makes confirming something was successfully updated difficult, must check many things. How to deal with failure midway?
     - intraday should only be gotten through this, entering e.g. "CLF 2021-04" in CLI will make a new ticker wih that date...
-- add forex to jobqueue etc.
-    - use this format: JPY:EUR
 - deploy to oracle, turso
+    - for oracle, make updaterdaemon which does case 2 of userinput options (updating only)
 - split commodities in 2, some require more left hand precision, others right hand. Can reduce data by a fair bit
-- highest
-    - vol in daily 853446200
-    - val in commodities 158461.000000000000
-        - -36.980000000000 lol i remember that day WTI
+    - highest
+        - vol in daily 853446200
+        - val in commodities 158461.000000000000
+            - -36.980000000000 lol i remember that day WTI
 
-
-- add "type" to ticker input
-    - 
 - decouple from alphavantage api
     - add more apis
     - test alignment between different sources
@@ -46,11 +43,6 @@
     - mostly for fun, would overload API here
     - also not relevant for [CompanyModels](https://github.com/veqqq/CompanyModels) which can't retrieve and insert many more valuations than ticks...
 
-- remove nulls e.g. in commodities:   4 | 0001-01-01 | 0.000000000000 |          1
-- corn etf and corn commodity conflict, same ticker (query builder takes corn to declare a func...)
-    - but are they different?
-    - research how BRENT and BNO, WHEAT and EAT, SUGAR and CANE, ALUMINIUM and JJUFF etc. differ
-- how is e.g. (Sector) xle different from (commodity etf?) dbe
 - bash install script
     - build go cli
     - docker-compose build and up -d (how to deal with different environments?)

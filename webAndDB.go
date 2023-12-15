@@ -134,3 +134,13 @@ func UpdateJobQueue(db *sql.DB) {
 		fmt.Print("The job queue is empty. Everything is up to date.")
 	}
 }
+
+func ReportApiCall(db *sql.DB) {
+	result, err := db.Exec("UPDATE ApiCalls SET CallCount = CallCount + 1 WHERE date = CURRENT_DATE")
+	e.Check(err)
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		_, err := db.Exec("INSERT INTO ApiCalls (date, CallCount, datasource) VALUES (CURRENT_DATE, 1, 1)")
+		e.Check(err)
+	}
+}

@@ -90,6 +90,7 @@ mainchoice:
 
 			UpdateLastUpdated(db, ticker.TickerSymbol)
 			RemoveFromJobQueue(db, ticker.TickerSymbol)
+			ReportApiCall(db)
 
 			time.Sleep(6 * time.Second) // timer to not overload the api
 		}
