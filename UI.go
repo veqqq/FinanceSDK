@@ -89,26 +89,26 @@ mainchoice:
 			readResp, err := io.ReadAll(resp.Body)
 			e.Check(err)
 			thing.giventype.Upload(db, ticker.TickerSymbol, ticker.TickerID, readResp) // should wrap this, to pass thing
-			// do these still write if db insert failed?
+
 			UpdateLastUpdated(db, ticker.TickerSymbol)
 			RemoveFromJobQueue(db, ticker.TickerSymbol)
 
 			time.Sleep(6 * time.Second) // timer to not overload the api
 		}
-	case 3: // broken, need to add old query builder here?
-		// v0.1 functionality
+	case 3:
+		// v0.1 functionality implemented in depricated.go
 		ticker := GetTickerFromUser()
-		url := QueryBuilder(ticker)
-		fmt.Println(url.url+" %T", url.giventype)
+		url := DepricatedQueryBuilder(ticker)
+		fmt.Println(url+" %T", url)
 
-		req, _ := http.NewRequest("GET", url.url, nil)
+		req, _ := http.NewRequest("GET", url, nil)
 		req.Header.Add("X-RapidAPI-Key", apiKey)
 		req.Header.Add("X-RapidAPI-Host", "alpha-vantage.p.rapidapi.com")
 
 		resp, err := http.DefaultClient.Do(req)
 		e.Check(err)
 		defer resp.Body.Close()
-		finalData := ReformatJson(resp.Body) // relies on global which query builder no longer sets
+		finalData := DepricatedReformatJson(resp.Body) // relies on global which query builder no longer sets
 		WriteToFile(ticker, finalData)
 	case 4:
 		fmt.Println("Exiting program.")
