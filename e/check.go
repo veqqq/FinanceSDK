@@ -1,30 +1,12 @@
 package e
 
 import (
-	"FinanceSDK/APIs"
 	"database/sql"
 	"fmt"
 	"os"
 )
 
 func Check(err error) {
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(-1)
-	}
-}
-
-// Checks if JSON received from site was empty. Applies if:
-// - ticker not supported by vendor
-// - vendor is querried too fast and does not supply results
-// IsEmptyer is implemented by the wrapper structs w/ original json format
-func CheckJSON(err error, json APIs.IsEmptyer) {
-	if json.IsEmpty() {
-		fmt.Println("The decoded JSON is empty or contains an empty map.")
-		fmt.Println(json)
-		os.Exit(-1)
-	}
-
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(-1)

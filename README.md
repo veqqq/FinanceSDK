@@ -32,6 +32,15 @@ AND NOT EXISTS (
     - can probably restructure those huge switches
     - should implement "is nil" for a e.Check test
 
+--------------
+		// refactor to this:		https://go.dev/play/p/E0QOqFRzuHD
+		// Querybuilder -> struct {url string, umbrealltype Uploader}
+		// unmarshal into *umbrealla type, which will be the specific needed type!
+		// uploading(struct.umbrellatype)
+
+----------
+
+
 - check #todos in the code
 
 - manage secrets better
@@ -104,7 +113,7 @@ AND NOT EXISTS (
     WHERE dailyOHLCVs.TickerID = tickers.TickerID
 );
 
-sudo docker exec -it pgsql-dev bash
+sudo docker exec -it financesdk_db_1 bash
 
 - .env file in /e like this:{"X-RapidAPI-Key":"apikey"}
 

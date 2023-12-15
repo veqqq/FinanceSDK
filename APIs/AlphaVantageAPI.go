@@ -14,10 +14,6 @@ import (
 ///////////////////////
 // Stock Ticker Data:
 
-func (d DailyOHLCVs) IsEmpty() bool {
-	return len(d.TimeSeries) == 0
-}
-
 // TIME_SERIES_DAILY
 type DailyOHLCVs struct {
 	MetaData   DailyOHLCVMetaData    `json:"Meta Data"`
@@ -39,10 +35,6 @@ type DailyOHLCV struct {
 	Low    float64 `json:"3. low,string"`
 	Close  float64 `json:"4. close,string"`
 	Volume int64   `json:"5. volume,string"`
-}
-
-func (d IntradayOHLCVs) IsEmpty() bool {
-	return len(d.TimeSeries1min) == 0
 }
 
 // TIME_SERIES_INTRADAY
@@ -71,14 +63,6 @@ type IntradayOHLCV struct {
 //////////////////
 // Stock Fundementals:
 // The 4 financial statements + "overview"
-
-type FinancialStatements struct { // statements embed this struct
-	QuarterlyReports []interface{} // satisfying the interface
-}
-
-func (c FinancialStatements) IsEmpty() bool {
-	return len(c.QuarterlyReports) == 0
-}
 
 // income statement
 // json: invalid use of ,string struct tag, trying to unmarshal "None" into float64
@@ -239,10 +223,6 @@ type QuarterlyEarnings struct {
 	SurprisePercentage ownFloat64 `json:"surprisePercentage"`
 }
 
-func (c StockOverview) IsEmpty() bool {
-	return len(c.Symbol) == 0
-}
-
 // overview
 type StockOverview struct {
 	Symbol                     string     `json:"Symbol"`
@@ -311,10 +291,6 @@ type StockOverview struct {
 // nonfarm payroll - in thousands of people, only monthly
 // treasury yield - in percent, monthly or daily?
 //          // maturities: 3month, 2year, 5year, 7year, 10year
-
-func (c CommodityPrices) IsEmpty() bool {
-	return len(c.Data) == 0
-}
 
 type CommodityPrices struct { // rename
 	Name string `json:"name"` // e.g. global price of copper or henry hub...

@@ -1,12 +1,8 @@
 package main
 
 import (
-	"FinanceSDK/e"
-	"net/http"
 	"os"
 	"testing"
-
-	"github.com/DATA-DOG/go-sqlmock"
 )
 
 // tests to add:
@@ -58,41 +54,44 @@ func TestGetTickerFromUser(t *testing.T) {
 		})
 	}
 }
-func TestJsonToPostgres(t *testing.T) {
-	testCases := []struct {
-		ticker   string
-		url      string
-		testtype string
-		expected string
-	}{
-		{"IBM",
-			"https://www.alphavantage.co/query?function=OVERVIEW&symbol=IBM&apikey=demo",
-			"APIs.StockOverview",
-			"nope", // #todo fix this my god, make DB fake...
-		}}
 
-	for _, tc := range testCases {
-		t.Run(tc.ticker, func(t *testing.T) {
-			structType = tc.testtype
-			resp, err := http.Get(tc.url)
-			e.Check(err)
+// func TestJsonToPostgres(t *testing.T) {
+// 	testCases := []struct {
+// 		ticker   string
+// 		url      string
+// 		testtype string
+// 		expected string
+// 	}{
+// 		{"IBM",
+// 			"https://www.alphavantage.co/query?function=OVERVIEW&symbol=IBM&apikey=demo",
+// 			"APIs.StockOverview",
+// 			"nope", // #todo fix this my god, make DB fake...
+// 		}}
 
-			// Create a mock database connection
-			db, mock, err := sqlmock.New()
-			e.Check(err)
-			defer db.Close()
+// 	for _, tc := range testCases {
+// 		t.Run(tc.ticker, func(t *testing.T) {
+// 			structType = tc.testtype
+// 			resp, err := http.Get(tc.url)
+// 			e.Check(err)
 
-			// Set up expectations for the mock database
-			mock.ExpectExec("INSERT INTO stock_overviews").WillReturnResult(sqlmock.NewResult(1, 1))
+// 			// Create a mock database connection
+// 			db, mock, err := sqlmock.New()
+// 			e.Check(err)
+// 			defer db.Close()
 
-			JsonToPostgres(db, tc.ticker, resp.Body)
+// 			// Set up expectations for the mock database
+// 			mock.ExpectExec("INSERT INTO stock_overviews").WillReturnResult(sqlmock.NewResult(1, 1))
 
-			// Check if all expectations were met
-			if err := mock.ExpectationsWereMet(); err != nil {
-				t.Errorf("unfulfilled expectations: %s", err)
-			}
-		})
-	}
-}
+// 			// JsonToPostgres(db, tc.ticker, resp.Body)
+
+// 			// replaced by uploaders...
+
+// 			// Check if all expectations were met
+// 			if err := mock.ExpectationsWereMet(); err != nil {
+// 				t.Errorf("unfulfilled expectations: %s", err)
+// 			}
+// 		})
+// 	}
+// }
 
 // --------------------

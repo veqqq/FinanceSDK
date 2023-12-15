@@ -1,10 +1,12 @@
 package main
 
 import (
+	"FinanceSDK/APIs"
 	"FinanceSDK/e"
 	"bufio"
 	"database/sql"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"regexp"
@@ -24,13 +26,6 @@ func GetSanatizedInput(msg string, args ...string) string {
 		}
 		fmt.Printf("Invalid input")
 	}
-}
-
-func GetTickerID(db *sql.DB, ticker string) int {
-	var tickerID int
-	err := db.QueryRow("SELECT TickerID FROM tickers WHERE TickerSymbol = $1", ticker).Scan(&tickerID)
-	e.Check(err)
-	return tickerID
 }
 
 // main logic/loop
@@ -81,34 +76,39 @@ mainchoice:
 		fmt.Print("\n")
 
 		for _, ticker := range tickers {
-			url := QueryBuilder(ticker.TickerSymbol)
-			req, _ := http.NewRequest("GET", url, nil)
+			thing := QueryBuilder(ticker.TickerSymbol) // thing is Container w Uploader
+			req, _ := http.NewRequest("GET", thing.url, nil)
 			req.Header.Add("X-RapidAPI-Key", apiKey)
 			req.Header.Add("X-RapidAPI-Host", "alpha-vantage.p.rapidapi.com")
 
 			resp, err := http.DefaultClient.Do(req)
 			e.Check(err)
 			defer resp.Body.Close()
+			fmt.Println(thing.url+" %T", thing.giventype) // will it say uploader? Should be more precise #todo
 
-			fmt.Println(url + " " + structType)
+			readResp, err := io.ReadAll(resp.Body)
+			e.Check(err)
+			thing.giventype.Upload(db, ticker.TickerSymbol, ticker.TickerID, readResp) // should wrap this, to pass thing
+			// do these still write if db insert failed?
+			UpdateLastUpdated(db, ticker.TickerSymbol)
+			RemoveFromJobQueue(db, ticker.TickerSymbol)
 
-			JsonToPostgres(db, ticker.TickerSymbol, resp.Body)
 			time.Sleep(6 * time.Second) // timer to not overload the api
 		}
-	case 3:
+	case 3: // broken, need to add old query builder here?
 		// v0.1 functionality
 		ticker := GetTickerFromUser()
 		url := QueryBuilder(ticker)
-		fmt.Println(url + " " + structType)
+		fmt.Println(url.url+" %T", url.giventype)
 
-		req, _ := http.NewRequest("GET", url, nil)
+		req, _ := http.NewRequest("GET", url.url, nil)
 		req.Header.Add("X-RapidAPI-Key", apiKey)
 		req.Header.Add("X-RapidAPI-Host", "alpha-vantage.p.rapidapi.com")
 
 		resp, err := http.DefaultClient.Do(req)
 		e.Check(err)
 		defer resp.Body.Close()
-		finalData := ReformatJson(resp.Body)
+		finalData := ReformatJson(resp.Body) // relies on global which query builder no longer sets
 		WriteToFile(ticker, finalData)
 	case 4:
 		fmt.Println("Exiting program.")
@@ -171,13 +171,22 @@ func GetTickerFromUser() string {
 	return userInput
 }
 
+type Uploader interface {
+	Upload(db *sql.DB, ticker string, ID int, body []byte)
+}
+
+type Container struct {
+	url       string
+	giventype Uploader
+}
+
 // this sanatizes input in the cli, but also chooses types for moving data around
 // nearly a god function
 // example querry:
 // https://alpha-vantage.p.rapidapi.com/query?function=TIME_SERIES_DAILY&symbol=EWZ - the apikey goes in a header
 // ticker's a string with spaces, check the first word in the switch statement (e.g. overview ewz -> OVERVIEW EWZ)
 // this frist word picks the func/querry type
-func QueryBuilder(ticker string) (url string) {
+func QueryBuilder(ticker string) (result Container) {
 	// the actual ticker comes after
 	tickerFirst := strings.Fields(ticker)[0]
 	var dateRegexIsTrue string
@@ -188,124 +197,124 @@ func QueryBuilder(ticker string) (url string) {
 	switch tickerFirst {
 	// News sentiment - complicated beast - figure out later
 	// FX_DAILY
-	case "EXCHANGE", "CURRENCY", "RATE":
-		from := strings.Fields(ticker)[1]
-		to := strings.Fields(ticker)[2]
-		url = baseUrl + "FX_DAILY" + "&outputsize=full" + "&from_symbol=" + from + "&to_symbol=" + to
-		structType = "APIs.ForexPrices"
-		return
+	// case "EXCHANGE", "CURRENCY", "RATE": #todo need to implement ForexPrices uploader...
+	// 	from := strings.Fields(ticker)[1]
+	// 	to := strings.Fields(ticker)[2]
+	// 	result.url = baseUrl + "FX_DAILY" + "&outputsize=full" + "&from_symbol=" + from + "&to_symbol=" + to
+	// 	result.giventype = APIs.ForexPrices{}
+	// 	return
 	// // TOP_GAINERS_LOSERS and most active... // removed
 	// case "TGLAT", "TGLATS", "GAINERS", "LOSERS", "TOPGAINERSLOSERS":
 	// 	url = baseUrl + "TOP_GAINERS_LOSERS"
-	// 	structType = "APIs.TGLATs"
+	// 	result.giventype = "APIs.TGLATs"
 	// 	return
 	case "OVERVIEW":
 		tickerNext := strings.Fields(ticker)[1]
-		url = baseUrl + "OVERVIEW" + "&symbol=" + tickerNext
-		structType = "APIs.StockOverview"
+		result.url = baseUrl + "OVERVIEW" + "&symbol=" + tickerNext
+		result.giventype = APIs.StockOverview{}
 		return
 	// income INCOME_STATEMENT  // "EARNINGS", "CASHFLOW", "BALANCE", "BALANCESHEET", "INCOME", "INCOMESTATEMENT"
 	case "INCOME_STATEMENT", "INCOME", "STATEMENT", "INCOMESTATEMENT":
 		tickerNext := strings.Fields(ticker)[1]
-		url = baseUrl + "INCOME_STATEMENT" + "&symbol=" + tickerNext
-		structType = "APIs.IncomeStatements"
+		result.url = baseUrl + "INCOME_STATEMENT" + "&symbol=" + tickerNext
+		result.giventype = APIs.IncomeStatements{}
 		return
 	case "BALANCE_SHEET", "BALANCESHEET", "BALANCE":
 		tickerNext := strings.Fields(ticker)[1]
-		url = baseUrl + "BALANCE_SHEET" + "&symbol=" + tickerNext
-		structType = "APIs.BalanceSheets"
+		result.url = baseUrl + "BALANCE_SHEET" + "&symbol=" + tickerNext
+		result.giventype = APIs.BalanceSheets{}
 		return
 	case "CASH_FLOW", "CASHFLOW":
 		tickerNext := strings.Fields(ticker)[1]
-		url = baseUrl + "CASH_FLOW" + "&symbol=" + tickerNext
-		structType = "APIs.CashFlowStatements"
+		result.url = baseUrl + "CASH_FLOW" + "&symbol=" + tickerNext
+		result.giventype = APIs.CashFlowStatements{}
 		return
-	case "EARNINGS":
-		tickerNext := strings.Fields(ticker)[1]
-		url = baseUrl + "EARNINGS" + "&symbol=" + tickerNext
-		structType = "APIs.EarningsData"
-		return
+	// case "EARNINGS": #did not put earnings data in sql, so no uploader implemented
+	// 	tickerNext := strings.Fields(ticker)[1]
+	// 	result.url = baseUrl + "EARNINGS" + "&symbol=" + tickerNext
+	// 	result.giventype = APIs.EarningsData{}
+	// 	return
 	// commodities and macro indicators use the same structs, but are funcs instead of ticker
 	// WTI, BRENT, NATURAL_GAS, COPPER, ALUMINUM, WHEAT, CORN, COTTON, SUGAR, COFFEE, ALL_COMMODITIES
 	case "WTI":
-		url = baseUrl + "WTI" + "&interval=daily"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "WTI" + "&interval=daily"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "BRENT":
-		url = baseUrl + "BRENT" + "&interval=daily"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "BRENT" + "&interval=daily"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "NATURAL_GAS", "GAS":
-		url = baseUrl + "NATURAL_GAS" + "&interval=daily"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "NATURAL_GAS" + "&interval=daily"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "COPPER":
-		url = baseUrl + "COPPER" + "&interval=quarterly"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "COPPER" + "&interval=quarterly"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "ALUMINUM":
-		url = baseUrl + "ALUMINUM" + "&interval=quarterly"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "ALUMINUM" + "&interval=quarterly"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "WHEAT":
-		url = baseUrl + "WHEAT" + "&interval=quarterly"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "WHEAT" + "&interval=quarterly"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "CORN":
-		url = baseUrl + "CORN" + "&interval=quarterly"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "CORN" + "&interval=quarterly"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "COTTON":
-		url = baseUrl + "COTTON" + "&interval=quarterly"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "COTTON" + "&interval=quarterly"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "SUGAR":
-		url = baseUrl + "SUGAR" + "&interval=quarterly"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "SUGAR" + "&interval=quarterly"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "COFFEE":
-		url = baseUrl + "COFFEE" + "&interval=quarterly"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "COFFEE" + "&interval=quarterly"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "ALL_COMMODITIES":
-		url = baseUrl + "ALL_COMMODITIES" + "&interval=quarterly"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "ALL_COMMODITIES" + "&interval=quarterly"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "GDP", "REAL_GDP":
-		url = baseUrl + "REAL_GDP" + "&interval=quarterly"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "REAL_GDP" + "&interval=quarterly"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "GDPPC", "GDPPERCAP", "REAL_GDP_PER_CAPITA":
-		url = baseUrl + "REAL_GDP_PER_CAPITA" + "&interval=quarterly"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "REAL_GDP_PER_CAPITA" + "&interval=quarterly"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "FEDFUNDSRATE", "FEDFUNDS", "FUNDS", "EFFECTIVEFEDERALFUNDSRATE", "EFFR", "FEDERAL_FUNDS_RATE":
-		url = baseUrl + "FEDERAL_FUNDS_RATE" + "&interval=daily"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "FEDERAL_FUNDS_RATE" + "&interval=daily"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "CPI":
-		url = baseUrl + "CPI" + "&interval=monthly"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "CPI" + "&interval=monthly"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "INFLATION":
-		url = baseUrl + "INFLATION"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "INFLATION"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "RETAILSALES", "RETAIL", "RETAIL_SALES":
-		url = baseUrl + "RETAIL_SALES"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "RETAIL_SALES"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "DURABLES":
-		url = baseUrl + "DURABLES"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "DURABLES"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "UNEMPLOYMENT":
-		url = baseUrl + "UNEMPLOYMENT"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "UNEMPLOYMENT"
+		result.giventype = APIs.CommodityPrices{}
 		return
 	case "NONFARMPAYROLL", "NONFARM", "PAYROLL", "EMPLOYMENT", "NONFARM_PAYROLL":
-		url = baseUrl + "NONFARM_PAYROLL"
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "NONFARM_PAYROLL"
+		result.giventype = APIs.CommodityPrices{}
 		return
 		// TREASURY_YIELD  &maturity 3month, 2year,5,year,7year, 10 year, 30year
 	case "BOND", "YIELD", "TREASURY", "TREASURY_YIELD":
@@ -325,8 +334,8 @@ func QueryBuilder(ticker string) (url string) {
 		case "30", "30y", "30yr", "30year":
 			maturity = "30year"
 		}
-		url = baseUrl + "TREASURY_YIELD" + "&interval=daily" + "&maturity=" + maturity
-		structType = "APIs.CommodityPrices"
+		result.url = baseUrl + "TREASURY_YIELD" + "&interval=daily" + "&maturity=" + maturity
+		result.giventype = APIs.CommodityPrices{}
 		return
 	// time series intraday   	 ?interval=1min  extended true/false?
 	// e.g. month=2009-01, since 2000-01
@@ -342,14 +351,14 @@ func QueryBuilder(ticker string) (url string) {
 			fmt.Println("Error: Date is before 2000-01")
 		}
 		tickerNext := strings.Fields(ticker)[1]
-		url = baseUrl + "TIME_SERIES_INTRADAY" + "&month" + tickerFirst + "&interval=1min" + "&symbol=" + tickerNext + "&outputsize=full"
-		structType = "APIs.IntradayOHLCVs"
+		result.url = baseUrl + "TIME_SERIES_INTRADAY" + "&month" + tickerFirst + "&interval=1min" + "&symbol=" + tickerNext + "&outputsize=full"
+		result.giventype = APIs.IntradayOHLCVs{}
 		return
 	// daily time series, DailyOHLCVs
 	// &outputsize=full gets 20 years of data, remove it when testing defaulting to compact with 100 data points...
 	default:
-		url = baseUrl + "TIME_SERIES_DAILY" + "&symbol=" + ticker + "&outputsize=full"
-		structType = "APIs.DailyOHLCVs"
+		result.url = baseUrl + "TIME_SERIES_DAILY" + "&symbol=" + ticker + "&outputsize=full"
+		result.giventype = APIs.DailyOHLCVs{}
 		return
 	}
 }
