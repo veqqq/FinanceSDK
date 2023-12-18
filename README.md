@@ -15,17 +15,19 @@
 - value companies with [CompanyModels](https://github.com/veqqq/CompanyModels) and explore data
 
 
+ALTER TABLE tickers
+ADD CONSTRAINT etf_type_constraint
+CHECK (
+  (type = 'macro' OR type = 'commodity' OR type LIKE '%ETF%') AND coverage = 'daily'
+);
+
+ETFs, Commodities, Forex, macro
+
+
 ### To Do:
-- add something like "coverage" to determine if you should get dailies, intraday, financial docs...
-    - makes confirming something was successfully updated difficult, must check many things. How to deal with failure midway?
-    - intraday should only be gotten through this, entering e.g. "CLF 2021-04" in CLI will make a new ticker wih that date...
-
-intraday x 12 x years
-overview
-balance_sheets
-cashflow
-income
-
+- api fails a lot, even at 1 call/10 secons. For 13 tickers, 12 overviews, 11 balance and earnings, 10 income, 9 cash.
+- check if alphavantage daily etc. are dividend adjusted and how on earth do people deal with that when new divies come, esp. since i like energy and brazil...
+- instead of os.exit when json empty, try going to the next thing? but stop if e.g. 3? are empty in a row?
 - check #todos in the code
 - manage secrets better
 - add testing
@@ -53,6 +55,8 @@ income
 ### Usage:
 - `sudo docker-compose build`
 - `sudo docker-compose up -d`
+
+- sudo docker exec -it financesdk_db_1 bash
 
 UPDATE tickers
 SET lastupdated = current_date - interval '2 months'
@@ -82,10 +86,18 @@ AND NOT EXISTS (
     WHERE dailyOHLCVs.TickerID = tickers.TickerID
 );
 
-sudo docker exec -it financesdk_db_1 bash
-
 - .env file in /e like this:{"X-RapidAPI-Key":"apikey"}
 
+
+ALTER TABLE tickers ADD CONSTRAINT check_tickers_type_coverage
+CHECK (
+  (type NOT LIKE '%stock%' AND coverage = 'daily') OR
+  (type LIKE '%stock%' AND coverage <> 'daily')
+);
+
+UPDATE tickers
+SET coverage = 'daily'
+WHERE type LIKE '%ETF%' OR type = 'commodity' OR type = 'Forex' OR type = 'macro';
 
 ### Implementation
 - Technologies:

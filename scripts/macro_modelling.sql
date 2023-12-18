@@ -179,7 +179,7 @@ INSERT INTO tickers (TickerSymbol, type, lastupdated, updatefrequency) VALUES
 ('XLU', 'sector ETF', current_date - interval '4 months', 'q'), -- utilities
 ('XLRE', 'sector ETF', current_date - interval '4 months', 'q'), -- real estate
 -- US small cap sectors:
-('PSCD', 'sector PSCD', current_date - interval '4 months', 'q'), -- small consumer discretionary
+('PSCD', 'sector ETF', current_date - interval '4 months', 'q'), -- small consumer discretionary
 ('PSCC', 'sector ETF', current_date - interval '4 months', 'q'), -- small consumer staples
 ('PSCH', 'sector ETF', current_date - interval '4 months', 'q'), --  healthcare
 ('PSCF', 'financial sector ETF', current_date - interval '4 months', 'q'), -- financial

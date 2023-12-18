@@ -119,7 +119,6 @@ type BalanceSheets struct {
 	FinancialStatements
 }
 
-
 type BalanceSheet struct {
 	FiscalDateEnding                       string     `json:"fiscalDateEnding"`
 	ReportedCurrency                       string     `json:"reportedCurrency"`
@@ -204,9 +203,9 @@ type CashFlowStatement struct {
 
 // Earnings
 type EarningsData struct {
-	Symbol            string              `json:"symbol"`
-	AnnualEarnings    []AnnualEarnings    `json:"annualEarnings"`
-	QuarterlyEarnings []QuarterlyEarnings `json:"quarterlyEarnings"`
+	Symbol           string              `json:"symbol"`
+	AnnualReports    []AnnualEarnings    `json:"annualEarnings"`
+	QuarterlyReports []QuarterlyEarnings `json:"quarterlyEarnings"`
 	FinancialStatements
 }
 

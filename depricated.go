@@ -73,7 +73,7 @@ func DepricatedReformatJson(resp io.Reader) string {
 		var m APIs.EarningsData
 		err := decoder.Decode(&m)
 		e.Check(err)
-		output, err := json.Marshal(m.QuarterlyEarnings)
+		output, err := json.Marshal(m.QuarterlyReports)
 		e.Check(err)
 		return string(output)
 	// Commodities and Economic Indicators - use same structure

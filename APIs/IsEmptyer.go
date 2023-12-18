@@ -10,15 +10,15 @@ import (
 // - vendor is querried too fast and does not supply results
 // IsEmptyer is implemented by the wrapper structs w/ original json format
 func CheckJSON(err error, json IsEmptyer) {
-	if json.IsEmpty() {
-		fmt.Println("The decoded JSON is empty or contains an empty map.")
-		fmt.Println(json)
-		os.Exit(-1)
-	}
-
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(-1)
+	}
+
+	if json.IsEmpty() {
+		fmt.Println("The decoded JSON is empty or contains an empty map.")
+		fmt.Println(json)
+		// os.Exit(-1)  // #todo this trips falsely on quarterly?
 	}
 }
 
@@ -26,12 +26,12 @@ type IsEmptyer interface {
 	IsEmpty() bool
 }
 
-func (c FinancialStatements) IsEmpty() bool {
+func (c FinancialStatements) IsEmpty() bool { // this trips falsely on quarterly?
 	return len(c.QuarterlyReports) == 0
 }
 
 type FinancialStatements struct { // statements embed this struct
-	QuarterlyReports []interface{} // satisfying the interface
+	QuarterlyReports []any // satisfying the interface
 }
 
 func (c StockOverview) IsEmpty() bool {

@@ -70,29 +70,36 @@ mainchoice:
 		}
 	case 2:
 		UpdateJobQueue(db)
-		tickers, err := GetJobQueue(db)
+		tickers, err := GetJobQueue(db) // these are single tickers
 		e.Check(err)
+		// at this point have tickers and coverage // #workinghere
+		// turn coverage into series of QueryTickers, received by query builder
+		coverageToQueryQueue(db, tickers) // adds to db
+		tickers, err = GetQueryQueue(db)
+		e.Check(err)
+		// if crazy stuff happens, it's here / above
 
 		for _, ticker := range tickers {
-			thing := QueryBuilder(ticker.TickerSymbol) // thing is Container w Uploader
+			thing := QueryBuilder(ticker.QueryTicker) // thing is Job w Uploader
 			req, _ := http.NewRequest("GET", thing.url, nil)
 			req.Header.Add("X-RapidAPI-Key", apiKey)
 			req.Header.Add("X-RapidAPI-Host", "alpha-vantage.p.rapidapi.com")
 
 			resp, err := http.DefaultClient.Do(req)
+			ReportApiCall(db)
 			e.Check(err)
 			defer resp.Body.Close()
-			fmt.Println(thing.url+" %T", thing.giventype) // will it say uploader? Should be more precise #todo
+			fmt.Println("\n"+thing.url+" %T", thing.giventype) // say uploader, should be more precise #todo
 
 			readResp, err := io.ReadAll(resp.Body)
 			e.Check(err)
+			// fmt.Println(resp.Body)
+			// fmt.Println(readResp)
 			thing.giventype.Upload(db, ticker.TickerSymbol, ticker.TickerID, readResp) // should wrap this, to pass thing
 
+			RemoveFromQueryQueue(db, ticker.QueryTicker)
 			UpdateLastUpdated(db, ticker.TickerSymbol)
-			RemoveFromJobQueue(db, ticker.TickerSymbol)
-			ReportApiCall(db)
-
-			time.Sleep(6 * time.Second) // timer to not overload the api
+			time.Sleep(10 * time.Second) // timer to not overload the api
 		}
 	case 3:
 		// v0.1 functionality implemented in depricated.go
@@ -174,18 +181,13 @@ type Uploader interface {
 	Upload(db *sql.DB, ticker string, ID int, body []byte)
 }
 
-type TypeContainer struct {
-	url       string
-	giventype Uploader
-}
-
 // this sanatizes input in the cli, but also chooses types for moving data around
 // nearly a god function
 // example querry:
 // https://alpha-vantage.p.rapidapi.com/query?function=TIME_SERIES_DAILY&symbol=EWZ - the apikey goes in a header
 // ticker's a string with spaces, check the first word in the switch statement (e.g. overview ewz -> OVERVIEW EWZ)
 // this frist word picks the func/querry type
-func QueryBuilder(ticker string) (result TypeContainer) {
+func QueryBuilder(ticker string) (result Job) {
 	// the actual ticker comes after
 	tickerFirst := strings.Fields(ticker)[0]
 	var dateRegexIsTrue string

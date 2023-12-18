@@ -20,10 +20,16 @@ CREATE TABLE tickers (
     TickerSymbol varchar unique,
     type varchar, -- stock, etf, macro, commodity? Manual labling?
     -- "bureaucracy fields"
-    lastupdated date,
-    updatefrequency varchar, -- how often to update
-    -- q = quarterly, m = monthly
-    coverage varchar -- what to include
+    lastupdated date DEFAULT CURRENT_DATE - INTERVAL '4 months',
+    updatefrequency varchar, -- how often to update -- q = quarterly, m = monthly
+    coverage varchar, -- what to include? intradayOHLCVs+statements+dailyOHLCVs, statements+dailyOHLCVs, daily
+    -- Checks set constraints. Non stocks should only be daily, no intraday/statements
+    CHECK (
+        (type = 'macro' OR type = 'commodity' OR type = 'Forex' OR type LIKE '%ETF%') AND coverage = 'daily'),
+    CHECK (
+        (type NOT LIKE '%stock%' AND coverage = 'daily') OR
+        (type LIKE '%stock%' AND coverage <> 'daily')
+    )
 );
 
 CREATE TABLE datasources (
@@ -68,6 +74,7 @@ CREATE TABLE stock_overviews (
     TickerID int REFERENCES tickers(TickerID),
     TickerSymbol varchar REFERENCES tickers(TickerSymbol),
     datasource int REFERENCES datasources(SourceID),
+    date DATE DEFAULT current_date,
     asset_type varchar,
     name varchar,
     cik varchar,
@@ -77,7 +84,7 @@ CREATE TABLE stock_overviews (
     sector varchar,
     industry varchar,
     address varchar,
-    fiscal_year_end varchar unique,
+    fiscal_year_end varchar,
     latest_quarter varchar,
     market_capitalization decimal,
     ebitda decimal,
@@ -109,14 +116,15 @@ CREATE TABLE stock_overviews (
     day_moving_average_200 decimal,
     shares_outstanding decimal,
     dividend_date varchar,
-    ex_dividend_date varchar
+    ex_dividend_date varchar,
+    primary key (TickerSymbol, date, datasource)
 );
 
 CREATE TABLE income_statements (
     TickerID int REFERENCES tickers(TickerID),
     TickerSymbol varchar REFERENCES tickers(TickerSymbol),
     datasource int REFERENCES datasources(SourceID),
-    fiscal_date_ending date unique,
+    fiscal_date_ending varchar,
     reported_currency varchar,
     gross_profit decimal,
     total_revenue decimal,
@@ -141,14 +149,15 @@ CREATE TABLE income_statements (
     comprehensive_income_net_of_tax decimal,
     ebit decimal,
     ebitda decimal,
-    net_income decimal
+    net_income decimal,
+    primary key (TickerSymbol, fiscal_date_ending, datasource)
 );
 
 CREATE TABLE balance_sheets (
     TickerID int REFERENCES tickers(TickerID),
     TickerSymbol varchar REFERENCES tickers(TickerSymbol),
     datasource int REFERENCES datasources(SourceID),
-    fiscal_date_ending date unique,
+    fiscal_date_ending varchar,
     reported_currency varchar,
     total_assets decimal,
     total_current_assets decimal,
@@ -185,14 +194,15 @@ CREATE TABLE balance_sheets (
     treasury_stock decimal,
     retained_earnings decimal,
     common_stock decimal,
-    common_stock_shares_outstanding decimal
+    common_stock_shares_outstanding decimal,
+    primary key (TickerSymbol, fiscal_date_ending, datasource)
 );
 
 CREATE TABLE cash_flow_statements (
     TickerID int REFERENCES tickers(TickerID),
     TickerSymbol varchar REFERENCES tickers(TickerSymbol),
     datasource int REFERENCES datasources(SourceID),
-    fiscal_date_ending date unique,
+    fiscal_date_ending varchar,
     reported_currency varchar,
     operating_cashflow decimal,
     payments_for_operating_activities decimal,
@@ -221,22 +231,22 @@ CREATE TABLE cash_flow_statements (
     proceeds_from_sale_of_treasury_stock decimal,
     change_in_cash_and_cash_equivalents decimal,
     change_in_exchange_rate decimal,
-    net_income decimal
+    net_income decimal,
+    primary key (TickerID, fiscal_date_ending, datasource)
 );
 
 CREATE TABLE earnings (
     TickerID int REFERENCES tickers(TickerID),
     TickerSymbol varchar REFERENCES tickers(TickerSymbol),
     datasource int REFERENCES datasources(SourceID),
-
     fiscal_date_ending date,
-    reported_date date;
+    reported_date date,
     reportedEPS decimal,
     estimatedEPS decimal,
     surprise decimal,
-    surprise_percentage decimal
+    surprise_percentage decimal,
+    primary key (TickerID, fiscal_date_ending, datasource)
 );
-
 
 -- Commodities and macro, the types are hard here
 -- e.g.: sugar: value":"24.9216494133885 <- 15!
@@ -257,6 +267,8 @@ CREATE TABLE forex (
     high decimal(10,7), -- e.g. close":"0.00643
     low decimal(10,7),
     close decimal(10,7),
-    datasource int REFERENCES datasources(SourceID)
+    datasource int REFERENCES datasources(SourceID),
+    primary key (TickerID, date, datasource)
+
 );
   

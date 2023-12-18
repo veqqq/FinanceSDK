@@ -26,6 +26,9 @@ func (of *ownFloat64) UnmarshalJSON(data []byte) error {
 	case string:
 		if v == "None" {
 			of.Valid = false
+		} else if v == "-" {
+			of.Valid = false
+
 		} else {
 			value, err := strconv.ParseFloat(v, 64)
 			if err != nil {
